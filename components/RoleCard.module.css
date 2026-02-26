@@ -1,0 +1,167 @@
+.card {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 36px 32px;
+    text-decoration: none;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    border-color: transparent;
+}
+
+.card:hover::before {
+    opacity: 1;
+}
+
+/* Orange variant */
+.orange::before {
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+}
+
+.orange:hover {
+    box-shadow: 0 20px 60px rgba(232, 114, 12, 0.15);
+}
+
+.orange .iconWrap {
+    background: var(--primary-lighter);
+}
+
+.orange .icon {
+    color: var(--primary);
+}
+
+.orange .cta {
+    color: var(--primary);
+}
+
+.orange .features li svg {
+    color: var(--primary);
+}
+
+/* Green variant */
+.green::before {
+    background: linear-gradient(90deg, var(--secondary), var(--secondary-light));
+}
+
+.green:hover {
+    box-shadow: 0 20px 60px rgba(76, 175, 80, 0.15);
+}
+
+.green .iconWrap {
+    background: var(--secondary-lighter);
+}
+
+.green .icon {
+    color: var(--secondary);
+}
+
+.green .cta {
+    color: var(--secondary);
+}
+
+.green .features li svg {
+    color: var(--secondary);
+}
+
+/* Mixed variant */
+.mixed::before {
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+}
+
+.mixed:hover {
+    box-shadow: 0 20px 60px rgba(100, 140, 60, 0.15);
+}
+
+.mixed .iconWrap {
+    background: linear-gradient(135deg, var(--primary-lighter), var(--secondary-lighter));
+}
+
+.mixed .icon {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.mixed .cta {
+    color: var(--secondary-dark);
+}
+
+.mixed .features li svg {
+    color: var(--secondary);
+}
+
+.iconWrap {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.icon {
+    font-size: 1.75rem;
+}
+
+.title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.description {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.features {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex: 1;
+}
+
+.features li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.cta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-top: auto;
+    transition: var(--transition-fast);
+}
+
+.card:hover .cta {
+    gap: 12px;
+}
