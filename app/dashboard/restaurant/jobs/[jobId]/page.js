@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import EmptyState from "@/components/ui/empty-state";
 import { ArrowLeft, User, Mail, Phone, Clock, FileText, CheckCircle2, XCircle, Ghost } from "lucide-react";
 
 export default async function JobApplicantsPage({ params }) {
@@ -74,15 +75,11 @@ export default async function JobApplicantsPage({ params }) {
             </header>
 
             {(!applications || applications.length === 0) ? (
-                <Card className="border-dashed border-2 border-zinc-200">
-                    <CardContent className="flex flex-col items-center justify-center p-16 text-center">
-                        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-                            <Ghost className="w-8 h-8 text-zinc-400" />
-                        </div>
-                        <h3 className="text-xl font-bold text-zinc-900 mb-2">No Applicants yet</h3>
-                        <p className="text-zinc-500 max-w-sm">Your job posting is live, but no one has applied yet. Give it some time!</p>
-                    </CardContent>
-                </Card>
+                <EmptyState
+                    icon={<Ghost className="h-8 w-8" />}
+                    title="No applicants yet"
+                    description="Your job posting is live, but no one has applied yet. Give it some time."
+                />
             ) : (
                 <div className="grid gap-6">
                     {applications.map((app) => {

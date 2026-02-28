@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import EmptyState from "@/components/ui/empty-state";
 import { ArrowLeft, Store, CheckCircle2, PackageSearch } from "lucide-react";
 import RequestQuoteModal from "@/components/vendor/RequestQuoteModal";
 
@@ -55,15 +56,11 @@ export default async function RestaurantVendorsDirectory() {
             </header>
 
             {(!vendors || vendors.length === 0) ? (
-                <Card className="border-dashed border-2 border-zinc-200">
-                    <CardContent className="flex flex-col items-center justify-center p-16 text-center">
-                        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-                            <PackageSearch className="w-8 h-8 text-zinc-400" />
-                        </div>
-                        <h3 className="text-xl font-bold text-zinc-900 mb-2">No Vendors Available</h3>
-                        <p className="text-zinc-500 max-w-sm">No B2B suppliers have joined your area yet.</p>
-                    </CardContent>
-                </Card>
+                <EmptyState
+                    icon={<PackageSearch className="h-8 w-8" />}
+                    title="No vendors available"
+                    description="No B2B suppliers have joined your area yet."
+                />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {vendors.map((vendorObj) => (

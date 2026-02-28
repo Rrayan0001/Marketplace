@@ -1,10 +1,10 @@
 .card {
     display: flex;
     flex-direction: column;
-    background: var(--surface);
-    border: 2px solid var(--border);
+    background: linear-gradient(180deg, #ffffff 0%, #fffdf8 100%);
+    border: 2px solid var(--brand-border);
     border-radius: var(--radius-xl);
-    padding: 36px 32px;
+    padding: clamp(22px, 4vw, 36px) clamp(18px, 3.4vw, 32px);
     text-decoration: none;
     transition: var(--transition);
     position: relative;
@@ -32,8 +32,12 @@
 }
 
 /* Orange variant */
+.orange {
+    background: linear-gradient(165deg, #fff7ec 0%, #ffffff 52%, #fff1df 100%);
+}
+
 .orange::before {
-    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+    background: linear-gradient(90deg, var(--brand-primary), var(--brand-primary-light));
 }
 
 .orange:hover {
@@ -41,24 +45,28 @@
 }
 
 .orange .iconWrap {
-    background: var(--primary-lighter);
+    background: var(--brand-primary-lighter);
 }
 
 .orange .icon {
-    color: var(--primary);
+    color: var(--brand-primary);
 }
 
 .orange .cta {
-    color: var(--primary);
+    color: var(--brand-primary);
 }
 
 .orange .features li svg {
-    color: var(--primary);
+    color: var(--brand-primary);
 }
 
 /* Green variant */
+.green {
+    background: linear-gradient(165deg, #f2fbf2 0%, #ffffff 52%, #e9f7ea 100%);
+}
+
 .green::before {
-    background: linear-gradient(90deg, var(--secondary), var(--secondary-light));
+    background: linear-gradient(90deg, var(--brand-secondary), var(--brand-secondary-light));
 }
 
 .green:hover {
@@ -66,24 +74,28 @@
 }
 
 .green .iconWrap {
-    background: var(--secondary-lighter);
+    background: var(--brand-secondary-lighter);
 }
 
 .green .icon {
-    color: var(--secondary);
+    color: var(--brand-secondary);
 }
 
 .green .cta {
-    color: var(--secondary);
+    color: var(--brand-secondary);
 }
 
 .green .features li svg {
-    color: var(--secondary);
+    color: var(--brand-secondary);
 }
 
 /* Mixed variant */
+.mixed {
+    background: linear-gradient(165deg, #fff7ec 0%, #f4fbf4 55%, #edf7ee 100%);
+}
+
 .mixed::before {
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
 }
 
 .mixed:hover {
@@ -91,21 +103,21 @@
 }
 
 .mixed .iconWrap {
-    background: linear-gradient(135deg, var(--primary-lighter), var(--secondary-lighter));
+    background: linear-gradient(135deg, var(--brand-primary-lighter), var(--brand-secondary-lighter));
 }
 
 .mixed .icon {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .mixed .cta {
-    color: var(--secondary-dark);
+    color: var(--brand-secondary-dark);
 }
 
 .mixed .features li svg {
-    color: var(--secondary);
+    color: var(--brand-secondary);
 }
 
 .iconWrap {
@@ -164,4 +176,56 @@
 
 .card:hover .cta {
     gap: 12px;
+}
+
+@media (max-width: 768px) {
+    .card {
+        border-radius: 20px;
+    }
+
+    .card:hover {
+        transform: translateY(-4px);
+    }
+
+    .iconWrap {
+        width: 58px;
+        height: 58px;
+        margin-bottom: 18px;
+    }
+
+    .title {
+        font-size: 1.22rem;
+        margin-bottom: 10px;
+    }
+
+    .description {
+        font-size: 0.93rem;
+        margin-bottom: 14px;
+    }
+
+    .features {
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .features li {
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+}
+
+@media (max-width: 480px) {
+    .iconWrap {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+    }
+
+    .icon {
+        font-size: 1.5rem;
+    }
+
+    .cta {
+        font-size: 0.92rem;
+    }
 }

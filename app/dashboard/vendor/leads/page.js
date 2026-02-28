@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import EmptyState from "@/components/ui/empty-state";
 import { ArrowLeft, Inbox, MapPin, Calendar, CheckCircle2, XCircle, Mail, Phone, Building2 } from "lucide-react";
 
 export default async function VendorLeadsPage() {
@@ -62,15 +63,11 @@ export default async function VendorLeadsPage() {
             </header>
 
             {(!leads || leads.length === 0) ? (
-                <Card className="border-dashed border-2 border-zinc-200">
-                    <CardContent className="flex flex-col items-center justify-center p-16 text-center">
-                        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-                            <Inbox className="w-8 h-8 text-zinc-400" />
-                        </div>
-                        <h3 className="text-xl font-bold text-zinc-900 mb-2">No New Leads Yet</h3>
-                        <p className="text-zinc-500 max-w-sm">Keep your profile updated! Local restaurants will send requests here when they need your services.</p>
-                    </CardContent>
-                </Card>
+                <EmptyState
+                    icon={<Inbox className="h-8 w-8" />}
+                    title="No new leads yet"
+                    description="Keep your profile updated. Local restaurants will send requests here when they need your services."
+                />
             ) : (
                 <div className="grid gap-6">
                     {leads.map((lead) => {
@@ -112,7 +109,7 @@ export default async function VendorLeadsPage() {
 
                                         <div className="bg-zinc-50 rounded-lg p-5 border border-zinc-100 mb-6">
                                             <p className="text-xs uppercase tracking-wider font-bold text-zinc-500 mb-2">Requirements / Details</p>
-                                            <p className="text-zinc-800 leading-relaxed m-0 italic">"{lead.details}"</p>
+                                            <p className="text-zinc-800 leading-relaxed m-0 italic">&ldquo;{lead.details}&rdquo;</p>
                                         </div>
                                     </div>
 

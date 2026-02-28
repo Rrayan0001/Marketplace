@@ -3,7 +3,7 @@
 /* HERO */
 .hero {
     position: relative;
-    padding: 160px 0 100px;
+    padding: 150px 0 96px;
     text-align: center;
     overflow: hidden;
 }
@@ -26,8 +26,8 @@
     align-items: center;
     gap: 8px;
     padding: 8px 20px;
-    background: var(--primary-lighter);
-    color: var(--primary-dark);
+    background: var(--brand-primary-lighter);
+    color: var(--brand-primary-dark);
     border-radius: var(--radius-full);
     font-size: 0.9rem;
     font-weight: 600;
@@ -60,8 +60,8 @@
 .sectionBadge {
     display: inline-flex;
     padding: 6px 16px;
-    background: var(--primary-lighter);
-    color: var(--primary-dark);
+    background: var(--brand-primary-lighter);
+    color: var(--brand-primary-dark);
     border-radius: var(--radius-full);
     font-size: 0.8rem;
     font-weight: 700;
@@ -72,7 +72,9 @@
 
 /* FEATURES */
 .features {
-    background: var(--white);
+    background: linear-gradient(180deg, #f6fbf6 0%, #fffaf3 100%);
+    border-top: 1px solid rgba(229, 231, 235, 0.7);
+    border-bottom: 1px solid rgba(229, 231, 235, 0.7);
 }
 
 .featureGrid {
@@ -82,17 +84,18 @@
 }
 
 .featureCard {
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: linear-gradient(170deg, #ffffff 0%, #fffaf2 100%);
+    border: 1px solid var(--brand-border);
     border-radius: var(--radius-lg);
     padding: 32px;
     transition: var(--transition);
+    box-shadow: 0 8px 22px rgba(17, 24, 39, 0.06);
 }
 
 .featureCard:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--primary-lighter);
+    transform: translateY(-5px);
+    box-shadow: 0 14px 28px rgba(17, 24, 39, 0.12);
+    border-color: rgba(232, 114, 12, 0.34);
 }
 
 .featureIcon {
@@ -126,7 +129,7 @@
 
 .jobCard {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid var(--brand-border);
     border-radius: var(--radius-lg);
     padding: 28px;
     transition: var(--transition);
@@ -154,8 +157,8 @@
     border-radius: var(--radius-full);
     font-size: 0.75rem;
     font-weight: 600;
-    background: var(--secondary-lighter);
-    color: var(--secondary-dark);
+    background: var(--brand-secondary-lighter);
+    color: var(--brand-secondary-dark);
 }
 
 .jobMeta {
@@ -190,7 +193,7 @@
 
 .workerCard {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid var(--brand-border);
     border-radius: var(--radius-lg);
     padding: 28px;
     text-align: center;
@@ -206,7 +209,7 @@
     width: 72px;
     height: 72px;
     border-radius: var(--radius-full);
-    background: var(--primary-lighter);
+    background: var(--brand-primary-lighter);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -221,7 +224,7 @@
 
 .workerRole {
     font-size: 0.85rem;
-    color: var(--primary);
+    color: var(--brand-primary);
     font-weight: 600;
     margin-bottom: 16px;
 }
@@ -258,8 +261,8 @@
     border-radius: var(--radius-full);
     font-size: 0.75rem;
     font-weight: 600;
-    background: var(--secondary-lighter);
-    color: var(--secondary-dark);
+    background: var(--brand-secondary-lighter);
+    color: var(--brand-secondary-dark);
 }
 
 /* VENDOR CARDS */
@@ -271,7 +274,7 @@
 
 .vendorCard {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid var(--brand-border);
     border-radius: var(--radius-lg);
     padding: 28px;
     transition: var(--transition);
@@ -286,7 +289,7 @@
     width: 56px;
     height: 56px;
     border-radius: var(--radius-md);
-    background: var(--primary-lighter);
+    background: var(--brand-primary-lighter);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -301,7 +304,7 @@
 
 .vendorCategory {
     font-size: 0.8rem;
-    color: var(--primary);
+    color: var(--brand-primary);
     font-weight: 600;
     margin-bottom: 10px;
 }
@@ -333,7 +336,12 @@
 .cta {
     position: relative;
     padding: 100px 0;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, var(--secondary-dark) 100%);
+    background: linear-gradient(
+        135deg,
+        var(--brand-primary) 0%,
+        var(--brand-primary-dark) 45%,
+        var(--brand-secondary-dark) 100%
+    );
     text-align: center;
 }
 
@@ -351,18 +359,57 @@
 
 .ctaContent .btn-primary {
     background: var(--white);
-    color: var(--primary);
+    color: var(--brand-primary);
     border-color: var(--white);
 }
 
 .ctaContent .btn-primary:hover {
-    background: var(--primary-lighter);
+    background: var(--brand-primary-lighter);
 }
 
 /* RESPONSIVE */
+@media (max-width: 1024px) {
+    .hero {
+        padding: 128px 0 84px;
+    }
+
+    .heroContent h1 {
+        font-size: 2.8rem;
+    }
+}
+
 @media (max-width: 768px) {
+    .hero {
+        padding: 106px 0 70px;
+    }
+
+    .heroContent {
+        max-width: 100%;
+    }
+
+    .heroBadge {
+        font-size: 0.78rem;
+        padding: 7px 14px;
+        margin-bottom: 16px;
+    }
+
     .heroContent h1 {
         font-size: 2.25rem;
+    }
+
+    .heroSub {
+        font-size: 1rem;
+        margin-bottom: 24px;
+    }
+
+    .heroCtas {
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .heroCtas .btn {
+        width: min(100%, 380px);
     }
 
     .featureGrid,
@@ -374,7 +421,60 @@
         margin: 0 auto;
     }
 
+    .featureCard,
+    .jobCard,
+    .workerCard,
+    .vendorCard {
+        padding: 22px;
+    }
+
+    .workerStats {
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .cta {
+        padding: 70px 0;
+    }
+
     .ctaContent h2 {
-        font-size: 1.75rem;
+        font-size: 1.9rem;
+    }
+
+    .ctaContent .btn-primary {
+        width: min(100%, 380px);
+    }
+}
+
+@media (max-width: 480px) {
+    .hero {
+        padding: 92px 0 56px;
+    }
+
+    .heroContent h1 {
+        font-size: 1.95rem;
+    }
+
+    .heroCtas .btn {
+        width: 100%;
+    }
+
+    .jobHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .jobMeta {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .workerStats {
+        justify-content: space-between;
+    }
+
+    .ctaContent h2 {
+        font-size: 1.7rem;
     }
 }

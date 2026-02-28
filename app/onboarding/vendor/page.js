@@ -6,12 +6,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { TriangleAlert, ScanFace } from "lucide-react";
+import {
+    VALIDATION_LIMITS,
+    getDescriptionLength,
+    isValidDescriptionLength,
+    isValidGst,
+    isValidIndianPhone,
+    normalizeGst,
+    normalizeIndianPhone,
+} from "@/lib/validation";
 
 export default function VendorOnboardingPage() {
     const router = useRouter();
     const supabase = createClient();
     const [loading, setLoading] = useState(false);
     const [file, setFile] = useState(null);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const [formData, setFormData] = useState({
         businessName: "",
@@ -26,8 +38,25 @@ export default function VendorOnboardingPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setErrorMessage("");
 
         try {
+            const normalizedPhone = normalizeIndianPhone(formData.phone);
+            if (!isValidIndianPhone(normalizedPhone)) {
+                throw new Error("Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.");
+            }
+
+            const normalizedGst = normalizeGst(formData.gstNumber);
+            if (!isValidGst(normalizedGst)) {
+                throw new Error("Enter a valid 15-character GST number (GSTIN).");
+            }
+
+            if (!isValidDescriptionLength(formData.description, VALIDATION_LIMITS.vendorDescription)) {
+                throw new Error(
+                    `Business description must be ${VALIDATION_LIMITS.vendorDescription.min}-${VALIDATION_LIMITS.vendorDescription.max} characters.`
+                );
+            }
+
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
@@ -48,20 +77,19 @@ export default function VendorOnboardingPage() {
             // 2. Create base Profile
             const { error: profileError } = await supabase.from('profiles').insert({
                 id: user.id, email: user.email, role: 'vendor',
-                full_name: formData.ownerName, phone: formData.phone, status: 'pending'
+                full_name: formData.ownerName, phone: normalizedPhone, status: 'pending'
             });
             if (profileError) throw profileError;
 
             // 3. Create Vendor Profile
-            const zonesArray = formData.operatingZones.split(',').map(z => z.trim());
             // we'd ideally map names to UUIDs, but keeping text array for now since schema asks for UUIDs. Wait, schema actually specified UUID[] for `operating_zones`. For simplicity in dev without zone DB loaded, we'll omit or parse differently. We will omit operating_zones insert in dev and focus on required fields.
             const { error: vendorError } = await supabase.from('vendor_profiles').insert({
                 profile_id: user.id,
                 business_name: formData.businessName,
                 service_category: formData.serviceCategory,
-                gst_number: formData.gstNumber,
+                gst_number: normalizedGst,
                 gst_certificate_url: documentUrl,
-                description: formData.description
+                description: formData.description.trim()
             });
             if (vendorError) throw vendorError;
 
@@ -85,7 +113,7 @@ export default function VendorOnboardingPage() {
 
             router.push("/dashboard");
         } catch (error) {
-            alert("Error: " + error.message);
+            setErrorMessage(error.message);
             setLoading(false);
         }
     };
@@ -101,6 +129,14 @@ export default function VendorOnboardingPage() {
 
                 <CardContent className="px-6 md:px-12 pb-12">
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {errorMessage ? (
+                            <Alert variant="destructive">
+                                <TriangleAlert className="h-4 w-4" />
+                                <AlertTitle>Couldn&apos;t submit application</AlertTitle>
+                                <AlertDescription>{errorMessage}</AlertDescription>
+                            </Alert>
+                        ) : null}
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">Owner Full Name <span className="text-red-500">*</span></Label>
@@ -108,7 +144,17 @@ export default function VendorOnboardingPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">Phone Number <span className="text-red-500">*</span></Label>
-                                <Input type="tel" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="h-11" />
+                                <Input
+                                    type="tel"
+                                    required
+                                    value={formData.phone}
+                                    onChange={e => setFormData({ ...formData, phone: normalizeIndianPhone(e.target.value) })}
+                                    inputMode="numeric"
+                                    maxLength={10}
+                                    pattern="[6-9][0-9]{9}"
+                                    title="Enter a valid 10-digit phone number starting with 6, 7, 8, or 9."
+                                    className="h-11"
+                                />
                             </div>
                         </div>
 
@@ -120,9 +166,9 @@ export default function VendorOnboardingPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">Service Category <span className="text-red-500">*</span></Label>
-                                <select 
+                                <select
                                     className="flex h-11 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-                                    value={formData.serviceCategory} 
+                                    value={formData.serviceCategory}
                                     onChange={e => setFormData({ ...formData, serviceCategory: e.target.value })}
                                 >
                                     <option value="kitchen_equipment">Kitchen Equipment</option>
@@ -133,30 +179,60 @@ export default function VendorOnboardingPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">GST Number <span className="text-red-500">*</span></Label>
-                                <Input type="text" required value={formData.gstNumber} onChange={e => setFormData({ ...formData, gstNumber: e.target.value })} className="h-11" />
+                                <Input
+                                    type="text"
+                                    required
+                                    value={formData.gstNumber}
+                                    onChange={e => setFormData({ ...formData, gstNumber: normalizeGst(e.target.value).slice(0, 15) })}
+                                    maxLength={15}
+                                    pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][A-Za-z0-9]Z[A-Za-z0-9]"
+                                    title="Enter a valid 15-character GST number (GSTIN)."
+                                    className="h-11 uppercase"
+                                />
                             </div>
                         </div>
 
                         <div className="space-y-2">
                             <Label className="text-zinc-700 font-medium">Business Description <span className="text-red-500">*</span></Label>
-                            <textarea 
-                                className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" 
-                                rows="3" 
-                                required 
-                                value={formData.description} 
+                            <textarea
+                                className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
+                                rows="3"
+                                required
+                                value={formData.description}
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                minLength={VALIDATION_LIMITS.vendorDescription.min}
+                                maxLength={VALIDATION_LIMITS.vendorDescription.max}
                             />
+                            <p className="text-xs text-zinc-500">
+                                {getDescriptionLength(formData.description)}/{VALIDATION_LIMITS.vendorDescription.max} characters
+                                {" "}({VALIDATION_LIMITS.vendorDescription.min}+ required)
+                            </p>
                         </div>
 
-                        <div className="space-y-3 pt-4 border-t border-zinc-100">
-                            <Label className="text-zinc-700 font-medium">Upload GST Certificate <span className="text-red-500">*</span></Label>
-                            <p className="text-sm text-zinc-500">Required for admin verification.</p>
-                            <Input 
-                                type="file" 
-                                accept="image/*,.pdf" 
-                                onChange={e => setFile(e.target.files[0])} 
-                                required 
-                                className="pt-2.5 pb-2 h-auto text-zinc-600 cursor-pointer"
+                        <div className="space-y-4 pt-4 border-t border-zinc-100">
+                            <div>
+                                <Label className="text-zinc-700 font-medium text-lg">Upload GST Certificate <span className="text-red-500">*</span></Label>
+                                <p className="text-sm text-zinc-500 mt-1">This will be scanned by our AI for verification.</p>
+                            </div>
+
+                            <Alert className="bg-blue-50/50 border-blue-200">
+                                <ScanFace className="h-5 w-5 text-blue-600" />
+                                <AlertTitle className="text-blue-900 font-semibold ml-2">AI Verification Guidelines</AlertTitle>
+                                <AlertDescription className="text-blue-800 ml-2 mt-2">
+                                    <ul className="list-disc leading-relaxed pl-4 space-y-1">
+                                        <li>Ensure text is highly clear and readable without blur.</li>
+                                        <li>Avoid glare or reflections from camera flash.</li>
+                                        <li>Ensure all 4 corners of the document are visible inside the frame.</li>
+                                    </ul>
+                                </AlertDescription>
+                            </Alert>
+
+                            <Input
+                                type="file"
+                                accept="image/*,.pdf"
+                                onChange={e => setFile(e.target.files[0])}
+                                required
+                                className="pt-2.5 pb-2 h-auto text-zinc-600 cursor-pointer bg-zinc-50 hover:bg-zinc-100 transition-colors"
                             />
                         </div>
 

@@ -9,7 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, TriangleAlert } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function RegisterForm() {
     const router = useRouter();
@@ -25,6 +26,7 @@ function RegisterForm() {
     const [otp, setOtp] = useState("");
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const roles = [
         { id: "restaurant", icon: "🍽️", label: "Restaurant", desc: "Hire staff and source vendors" },
@@ -41,15 +43,16 @@ function RegisterForm() {
 
     const handleNext = async (e) => {
         e.preventDefault();
+        setErrorMessage("");
 
         if (step === 1 && !role) {
-            alert("Please select a role");
+            setErrorMessage("Please select a role to continue.");
             return;
         }
 
         if (step === 2) {
             if (password !== confirmPassword) {
-                alert("Passwords do not match");
+                setErrorMessage("Passwords do not match.");
                 return;
             }
 
@@ -67,7 +70,7 @@ function RegisterForm() {
             setLoading(false);
 
             if (error) {
-                alert(error.message);
+                setErrorMessage(error.message);
                 return;
             }
 
@@ -94,7 +97,7 @@ function RegisterForm() {
             setLoading(false);
 
             if (error) {
-                alert(error.message);
+                setErrorMessage(error.message);
                 return;
             }
 
@@ -131,6 +134,14 @@ function RegisterForm() {
 
                 <CardContent>
                     <form onSubmit={handleNext} className="space-y-6">
+                        {errorMessage ? (
+                            <Alert variant="destructive">
+                                <TriangleAlert className="h-4 w-4" />
+                                <AlertTitle>Couldn&apos;t continue</AlertTitle>
+                                <AlertDescription>{errorMessage}</AlertDescription>
+                            </Alert>
+                        ) : null}
+
                         {/* Step 1: Role Selection */}
                         {step === 1 && (
                             <div className="space-y-4">

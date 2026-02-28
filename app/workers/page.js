@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { User, Search, MapPin, Handshake, BellRing, Star } from "lucide-react";
 import styles from "./page.module.css";
 
 export const metadata = {
@@ -13,7 +14,10 @@ export default function WorkersPage() {
             <section className={styles.hero}>
                 <div className={styles.heroBg} />
                 <div className={`container ${styles.heroContent}`}>
-                    <div className={styles.heroBadge}>👨‍🍳 For Workers</div>
+                    <div className={styles.heroBadge}>
+                        <User size={16} className="text-emerald-500" />
+                        For Workers
+                    </div>
                     <h1>
                         Find Restaurant Jobs{" "}
                         <span className="text-gradient">Near You</span>
@@ -28,9 +32,6 @@ export default function WorkersPage() {
                                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </Link>
-                        <Link href="#preview" className="btn btn-outline btn-lg">
-                            Preview Openings
-                        </Link>
                     </div>
                 </div>
             </section>
@@ -44,12 +45,12 @@ export default function WorkersPage() {
                     </div>
                     <div className={styles.featureGrid}>
                         {[
-                            { icon: "🔍", title: "Browse Local Jobs", desc: "See all openings in your zone — chefs, waiters, kitchen helpers, and more." },
-                            { icon: "📱", title: "Apply in One Tap", desc: "Found a match? Apply instantly. Or set yourself as 'Actively Available' for restaurants to find you." },
-                            { icon: "🛡️", title: "Get Verified", desc: "Upload Aadhaar or work experience. AI screens it, admin approves — get the 'Verified' badge." },
-                            { icon: "📊", title: "Track Applications", desc: "See all your applications, their status, and interview schedules in your dashboard." },
-                            { icon: "📍", title: "Hyperlocal Matching", desc: "Only see jobs within your zone. No commuting nightmares — work close to home." },
-                            { icon: "⭐", title: "Build Your Profile", desc: "Add your skills, availability schedule, and experience. Stand out to restaurants." },
+                            { icon: <Search size={28} className="text-blue-500" />, title: "Find Local Jobs", desc: "Discover hiring restaurants within your zone. Stop commuting across the city." },
+                            { icon: <MapPin size={28} className="text-red-500" />, title: "Zone-Based Matching", desc: "Set your preferred working zones and only get notified for relevant opportunities." },
+                            { icon: <Handshake size={28} className="text-orange-500" />, title: "Direct Applications", desc: "Apply directly to restaurants with one click using your verified Margros profile." },
+                            { icon: <User size={28} className="text-emerald-600" />, title: "Verified Identity", desc: "Get your Aadhaar and certificates AI-verified instantly to stand out to employers." },
+                            { icon: <BellRing size={28} className="text-amber-500" />, title: "Instant Alerts", desc: "Receive immediate notifications when restaurants in your zone post matching jobs." },
+                            { icon: <Star size={28} className="text-indigo-500" />, title: "Build Your Career", desc: "Collect positive reviews from past employers to increase your hiring chances." },
                         ].map((f, i) => (
                             <div key={i} className={styles.featureCard}>
                                 <span className={styles.featureIcon}>{f.icon}</span>
@@ -61,44 +62,6 @@ export default function WorkersPage() {
                 </div>
             </section>
 
-            {/* PREVIEW: SAMPLE WORKERS */}
-            <section id="preview" className={`section ${styles.preview}`}>
-                <div className="container">
-                    <div className="section-header">
-                        <div className={styles.sectionBadge}>Preview Mode</div>
-                        <h2>Sample Worker Profiles</h2>
-                        <p>Here&#39;s what verified profiles look like. Sign up to create yours!</p>
-                    </div>
-                    <div className={styles.workerGrid}>
-                        {[
-                            { name: "Ravi Kumar", role: "Head Chef", exp: "8 years", zone: "Koramangala", avatar: "👨‍🍳", avail: "Full-Time" },
-                            { name: "Priya S.", role: "Waitress", exp: "3 years", zone: "Yelahanka", avatar: "🙋‍♀️", avail: "Evening Shift" },
-                            { name: "Arjun M.", role: "Kitchen Helper", exp: "1 year", zone: "Indiranagar", avatar: "👨‍🔧", avail: "Flexible" },
-                        ].map((w, i) => (
-                            <div key={i} className={styles.workerCard}>
-                                <div className={styles.workerAvatar}>{w.avatar}</div>
-                                <h4>{w.name}</h4>
-                                <div className={styles.workerRole}>{w.role}</div>
-                                <div className={styles.workerStats}>
-                                    <div className={styles.workerStat}>
-                                        <span className={styles.workerStatValue}>{w.exp}</span>
-                                        <span className={styles.workerStatLabel}>Experience</span>
-                                    </div>
-                                    <div className={styles.workerStat}>
-                                        <span className={styles.workerStatValue}>{w.zone}</span>
-                                        <span className={styles.workerStatLabel}>Zone</span>
-                                    </div>
-                                    <div className={styles.workerStat}>
-                                        <span className={styles.workerStatValue}>{w.avail}</span>
-                                        <span className={styles.workerStatLabel}>Availability</span>
-                                    </div>
-                                </div>
-                                <span className={styles.verifiedBadge}>✅ Verified</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
 
             {/* CTA */}
             <section className={styles.cta}>

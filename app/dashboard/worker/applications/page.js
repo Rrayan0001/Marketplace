@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import EmptyState from "@/components/ui/empty-state";
 import { ArrowLeft, FileText, Building2, Calendar, Clock, CheckCircle2, XCircle, Search } from "lucide-react";
 
 export default async function WorkerApplicationsPage() {
@@ -64,18 +65,13 @@ export default async function WorkerApplicationsPage() {
             </header>
 
             {(!applications || applications.length === 0) ? (
-                <Card className="border-dashed border-2 border-zinc-200">
-                    <CardContent className="flex flex-col items-center justify-center p-16 text-center">
-                        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-                            <FileText className="w-8 h-8 text-zinc-400" />
-                        </div>
-                        <h3 className="text-xl font-bold text-zinc-900 mb-2">No Applications Yet</h3>
-                        <p className="text-zinc-500 max-w-sm mb-6">You haven't applied to any jobs yet. Browse open listings to get started!</p>
-                        <Link href="/dashboard/worker/jobs">
-                            <Button className="shadow-sm">Browse Open Jobs</Button>
-                        </Link>
-                    </CardContent>
-                </Card>
+                <EmptyState
+                    icon={<FileText className="h-8 w-8" />}
+                    title="No applications yet"
+                    description="You haven&apos;t applied to any jobs yet. Browse open listings to get started."
+                    actionHref="/dashboard/worker/jobs"
+                    actionLabel="Browse Open Jobs"
+                />
             ) : (
                 <div className="grid gap-4">
                     {applications.map((app) => {

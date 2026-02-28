@@ -3,16 +3,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { ArrowLeft, Briefcase } from "lucide-react";
+import { ArrowLeft, Briefcase, TriangleAlert } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { VALIDATION_LIMITS, getDescriptionLength, isValidDescriptionLength } from "@/lib/validation";
 
 export default function PostJobPage() {
     const router = useRouter();
     const supabase = createClient();
     const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const [formData, setFormData] = useState({
         title: "",
@@ -28,8 +31,15 @@ export default function PostJobPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setErrorMessage("");
 
         try {
+            if (!isValidDescriptionLength(formData.description, VALIDATION_LIMITS.jobDescription)) {
+                throw new Error(
+                    `Job description must be ${VALIDATION_LIMITS.jobDescription.min}-${VALIDATION_LIMITS.jobDescription.max} characters.`
+                );
+            }
+
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
@@ -51,7 +61,7 @@ export default function PostJobPage() {
                 experience_required: parseInt(formData.experienceRequired),
                 salary_min: formData.salaryMin ? parseInt(formData.salaryMin) : null,
                 salary_max: formData.salaryMax ? parseInt(formData.salaryMax) : null,
-                description: formData.description,
+                description: formData.description.trim(),
                 is_active: true
             });
 
@@ -60,7 +70,7 @@ export default function PostJobPage() {
             router.push("/dashboard/restaurant/jobs");
             router.refresh();
         } catch (error) {
-            alert("Error posting job: " + error.message);
+            setErrorMessage(`Error posting job: ${error.message}`);
             setLoading(false);
         }
     };
@@ -90,6 +100,13 @@ export default function PostJobPage() {
 
                 <CardContent className="px-6 md:px-12 pb-12">
                     <form onSubmit={handleSubmit} className="space-y-8">
+                        {errorMessage ? (
+                            <Alert variant="destructive">
+                                <TriangleAlert className="h-4 w-4" />
+                                <AlertTitle>Couldn&apos;t publish job</AlertTitle>
+                                <AlertDescription>{errorMessage}</AlertDescription>
+                            </Alert>
+                        ) : null}
                         
                         <div className="space-y-3">
                             <Label className="text-zinc-700 font-medium text-base">Job Title <span className="text-red-500">*</span></Label>
@@ -194,7 +211,13 @@ export default function PostJobPage() {
                                 required 
                                 value={formData.description} 
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                minLength={VALIDATION_LIMITS.jobDescription.min}
+                                maxLength={VALIDATION_LIMITS.jobDescription.max}
                             />
+                            <p className="text-xs text-zinc-500">
+                                {getDescriptionLength(formData.description)}/{VALIDATION_LIMITS.jobDescription.max} characters
+                                {" "}({VALIDATION_LIMITS.jobDescription.min}+ required)
+                            </p>
                         </div>
 
                         <div className="pt-6 border-t border-zinc-100 mt-8">

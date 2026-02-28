@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, User, CheckCircle2, Briefcase, Clock, Calendar, MessageSquare, ChefHat } from "lucide-react";
+import EmptyState from "@/components/ui/empty-state";
+import { ArrowLeft, User, CheckCircle2, MessageSquare, ChefHat } from "lucide-react";
 
 export default async function WorkerDirectoryPage() {
     const supabase = await createClient();
@@ -57,15 +58,11 @@ export default async function WorkerDirectoryPage() {
             </header>
 
             {(!workers || workers.length === 0) ? (
-                <Card className="border-dashed border-2 border-zinc-200">
-                    <CardContent className="flex flex-col items-center justify-center p-16 text-center">
-                        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-                            <ChefHat className="w-8 h-8 text-zinc-400" />
-                        </div>
-                        <h3 className="text-xl font-bold text-zinc-900 mb-2">No Workers Available Right Now</h3>
-                        <p className="text-zinc-500 max-w-sm">Workers in your area might be fully booked. Check back soon!</p>
-                    </CardContent>
-                </Card>
+                <EmptyState
+                    icon={<ChefHat className="h-8 w-8" />}
+                    title="No workers available right now"
+                    description="Workers in your area might be fully booked. Check back soon."
+                />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {workers.map((workerObj) => (

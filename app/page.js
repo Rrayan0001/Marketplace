@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Utensils, ChefHat, Package, ShieldCheck, MapPin, ScanLine, ArrowRightLeft, LayoutDashboard, Zap } from "lucide-react";
 import RoleCard from "@/components/RoleCard";
 import styles from "./page.module.css";
 
@@ -38,22 +39,6 @@ export default function Home() {
                 Explore Roles
               </Link>
             </div>
-            <div className={styles.heroStats}>
-              <div className={styles.stat}>
-                <span className={styles.statNum}>500+</span>
-                <span className={styles.statLabel}>Restaurants</span>
-              </div>
-              <div className={styles.statDivider} />
-              <div className={styles.stat}>
-                <span className={styles.statNum}>3,000+</span>
-                <span className={styles.statLabel}>Workers</span>
-              </div>
-              <div className={styles.statDivider} />
-              <div className={styles.stat}>
-                <span className={styles.statNum}>200+</span>
-                <span className={styles.statLabel}>Vendors</span>
-              </div>
-            </div>
           </div>
           <div className={styles.heroVisual}>
             <div className={styles.heroImageWrap}>
@@ -89,7 +74,7 @@ export default function Home() {
           </div>
           <div className={styles.roleGrid}>
             <RoleCard
-              icon="🍽️"
+              icon={<Utensils size={32} className="text-orange-500" strokeWidth={1.5} />}
               title="For Restaurants"
               description="Post jobs, browse vetted candidates, and source vendors — all in your local zone."
               features={[
@@ -102,7 +87,7 @@ export default function Home() {
               color="orange"
             />
             <RoleCard
-              icon="👨‍🍳"
+              icon={<ChefHat size={32} className="text-emerald-500" strokeWidth={1.5} />}
               title="For Workers"
               description="Find restaurant jobs near you, build your verified profile, and get hired faster."
               features={[
@@ -115,7 +100,7 @@ export default function Home() {
               color="green"
             />
             <RoleCard
-              icon="📦"
+              icon={<Package size={32} className="text-blue-500" strokeWidth={1.5} />}
               title="For Vendors"
               description="Reach restaurants in your area, showcase products, and receive quote requests."
               features={[
@@ -186,12 +171,12 @@ export default function Home() {
           </div>
           <div className={styles.featureGrid}>
             {[
-              { icon: "🛡️", title: "Verified Profiles", desc: "Every restaurant, worker, and vendor goes through AI + admin verification." },
-              { icon: "📍", title: "Hyperlocal Zones", desc: "See only matches in your geographic zone. City-level workforce management." },
-              { icon: "🤖", title: "AI Document OCR", desc: "Groq Vision LLM reads licenses, IDs, and certificates — instantly." },
-              { icon: "🔄", title: "Two-Way Hiring", desc: "Restaurants search candidates AND workers apply to jobs. Both paths work." },
-              { icon: "📊", title: "Admin Control Room", desc: "Comprehensive dashboard for approvals, analytics, zone management, and more." },
-              { icon: "⚡", title: "Lightning Fast", desc: "Built on Next.js + Supabase for serverless speed and seamless scalability." },
+              { icon: <ShieldCheck size={28} className="text-emerald-600" />, title: "Verified Profiles", desc: "Every restaurant, worker, and vendor goes through robust admin verification." },
+              { icon: <MapPin size={28} className="text-red-500" />, title: "Hyperlocal Zones", desc: "See only matches in your geographic zone. City-level workforce management." },
+              { icon: <ScanLine size={28} className="text-blue-500" />, title: "Instant Verification", desc: "Intelligent document scanning securely reads licenses, IDs, and certificates instantly." },
+              { icon: <ArrowRightLeft size={28} className="text-indigo-500" />, title: "Two-Way Hiring", desc: "Restaurants search candidates AND workers apply to jobs. Both paths work." },
+              { icon: <LayoutDashboard size={28} className="text-purple-500" />, title: "Admin Control Room", desc: "Comprehensive dashboard for approvals, analytics, zone management, and more." },
+              { icon: <Zap size={28} className="text-amber-500" />, title: "Reliable & Secure", desc: "Enterprise validation processes ensure your data is safe and the platform is blazingly fast." },
             ].map((f, i) => (
               <div key={i} className={styles.featureCard}>
                 <span className={styles.featureIcon}>{f.icon}</span>
@@ -219,8 +204,8 @@ export default function Home() {
             <Link href="/register" className="btn btn-primary btn-lg">
               Create Free Account
             </Link>
-            <Link href="#roles" className="btn btn-outline-white btn-lg">
-              Learn More
+            <Link href="#roles" className={`btn btn-outline-white btn-lg ${styles.ctaLearnMoreBtn}`}>
+              <span className={styles.ctaLearnMoreText}>Learn More</span>
             </Link>
           </div>
         </div>

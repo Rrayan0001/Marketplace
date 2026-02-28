@@ -19,7 +19,7 @@ export default async function OnboardingLayout({ children }) {
         .from('profiles')
         .select('status')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
     if (profile) {
         redirect('/dashboard')

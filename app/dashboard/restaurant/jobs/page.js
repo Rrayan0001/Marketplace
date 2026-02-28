@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, Calendar, Clock, MapPin, Users } from "lucide-react";
+import EmptyState from "@/components/ui/empty-state";
+import { ArrowLeft, Plus, FileText, Calendar, Clock, Users } from "lucide-react";
 
 export default async function RestaurantJobsPage() {
     const supabase = await createClient();
@@ -63,18 +64,13 @@ export default async function RestaurantJobsPage() {
             </header>
 
             {(!jobs || jobs.length === 0) ? (
-                <Card className="border-dashed border-2 border-zinc-200">
-                    <CardContent className="flex flex-col items-center justify-center p-16 text-center">
-                        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-                            <FileText className="w-8 h-8 text-zinc-400" />
-                        </div>
-                        <h3 className="text-xl font-bold text-zinc-900 mb-2">No Jobs Posted Yet</h3>
-                        <p className="text-zinc-500 max-w-sm mb-6">Create your first listing to start hiring verified workers.</p>
-                        <Link href="/dashboard/restaurant/post-job">
-                            <Button>Create Job Post</Button>
-                        </Link>
-                    </CardContent>
-                </Card>
+                <EmptyState
+                    icon={<FileText className="h-8 w-8" />}
+                    title="No jobs posted yet"
+                    description="Create your first listing to start hiring verified workers."
+                    actionHref="/dashboard/restaurant/post-job"
+                    actionLabel="Create Job Post"
+                />
             ) : (
                 <div className="grid gap-4">
                     {jobs.map((job) => (

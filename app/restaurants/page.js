@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Utensils, ClipboardList, Search, ShieldCheck, PackageOpen, MapPin, BarChart3, Clock } from "lucide-react";
 import styles from "./page.module.css";
 
 export const metadata = {
@@ -13,7 +14,10 @@ export default function RestaurantsPage() {
             <section className={styles.hero}>
                 <div className={styles.heroBg} />
                 <div className={`container ${styles.heroContent}`}>
-                    <div className={styles.heroBadge}>🍽️ For Restaurants</div>
+                    <div className={styles.heroBadge}>
+                        <Utensils size={16} className="text-orange-500" />
+                        For Restaurants
+                    </div>
                     <h1>
                         Hire Verified Staff{" "}
                         <span className="text-gradient">In Your Zone</span>
@@ -28,9 +32,6 @@ export default function RestaurantsPage() {
                                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </Link>
-                        <Link href="#preview" className="btn btn-outline btn-lg">
-                            Preview Jobs
-                        </Link>
                     </div>
                 </div>
             </section>
@@ -44,12 +45,12 @@ export default function RestaurantsPage() {
                     </div>
                     <div className={styles.featureGrid}>
                         {[
-                            { icon: "📋", title: "Post Jobs Instantly", desc: "Define role, salary, shift timings, and experience level. Get matched with workers in minutes." },
-                            { icon: "🔍", title: "Browse Worker Profiles", desc: "Filter by role (chef, waiter, cleaner), experience, availability, and zone. View verified badges." },
-                            { icon: "🛡️", title: "Verified Candidates", desc: "Every worker is AI-screened and admin-approved. See Aadhaar verification and experience proof." },
-                            { icon: "📦", title: "Vendor Marketplace", desc: "Source kitchen equipment, cleaning supplies, and services from admin-approved vendors." },
-                            { icon: "📍", title: "Zone-Based Matching", desc: "Only see workers and vendors within your geographic zone for hyperlocal efficiency." },
-                            { icon: "📊", title: "Hire Dashboard", desc: "Track all your job posts, applications, active hires, and placement history in one place." },
+                            { icon: <ClipboardList size={28} className="text-orange-500" />, title: "Post Jobs Instantly", desc: "Define role, salary, shift timings, and experience level. Get matched with workers in minutes." },
+                            { icon: <Search size={28} className="text-blue-500" />, title: "Browse Worker Profiles", desc: "Filter by role (chef, waiter, cleaner), experience, availability, and zone. View verified badges." },
+                            { icon: <ShieldCheck size={28} className="text-emerald-500" />, title: "Verified Candidates", desc: "Every worker is AI-screened and admin-approved. See Aadhaar verification and experience proof." },
+                            { icon: <PackageOpen size={28} className="text-amber-600" />, title: "Vendor Marketplace", desc: "Source kitchen equipment, cleaning supplies, and services from admin-approved vendors." },
+                            { icon: <MapPin size={28} className="text-red-500" />, title: "Zone-Based Matching", desc: "Only see workers and vendors within your geographic zone for hyperlocal efficiency." },
+                            { icon: <BarChart3 size={28} className="text-indigo-500" />, title: "Hire Dashboard", desc: "Track all your job posts, applications, active hires, and placement history in one place." },
                         ].map((f, i) => (
                             <div key={i} className={styles.featureCard}>
                                 <span className={styles.featureIcon}>{f.icon}</span>
@@ -61,51 +62,6 @@ export default function RestaurantsPage() {
                 </div>
             </section>
 
-            {/* PREVIEW: SAMPLE JOBS */}
-            <section id="preview" className={`section ${styles.preview}`}>
-                <div className="container">
-                    <div className="section-header">
-                        <div className={styles.sectionBadge}>Preview Mode</div>
-                        <h2>Sample Job Posts</h2>
-                        <p>Here&apos;s what job postings look like on Margros. Sign up to post your own!</p>
-                    </div>
-                    <div className={styles.jobGrid}>
-                        {[
-                            { role: "Head Chef", salary: "₹35,000/mo", shift: "Morning", zone: "Yelahanka", exp: "5+ years", type: "Full-Time" },
-                            { role: "Waiter/Server", salary: "₹18,000/mo", shift: "Evening", zone: "Koramangala", exp: "1+ year", type: "Full-Time" },
-                            { role: "Kitchen Helper", salary: "₹12,000/mo", shift: "Flexible", zone: "Indiranagar", exp: "Fresher OK", type: "Part-Time" },
-                        ].map((job, i) => (
-                            <div key={i} className={styles.jobCard}>
-                                <div className={styles.jobHeader}>
-                                    <h4>{job.role}</h4>
-                                    <span className={styles.jobType}>{job.type}</span>
-                                </div>
-                                <div className={styles.jobMeta}>
-                                    <div className={styles.jobDetail}>
-                                        <span className={styles.jobLabel}>💰 Salary</span>
-                                        <span className={styles.jobValue}>{job.salary}</span>
-                                    </div>
-                                    <div className={styles.jobDetail}>
-                                        <span className={styles.jobLabel}>🕐 Shift</span>
-                                        <span className={styles.jobValue}>{job.shift}</span>
-                                    </div>
-                                    <div className={styles.jobDetail}>
-                                        <span className={styles.jobLabel}>📍 Zone</span>
-                                        <span className={styles.jobValue}>{job.zone}</span>
-                                    </div>
-                                    <div className={styles.jobDetail}>
-                                        <span className={styles.jobLabel}>⭐ Exp</span>
-                                        <span className={styles.jobValue}>{job.exp}</span>
-                                    </div>
-                                </div>
-                                <Link href="/register?role=restaurant" className="btn btn-outline btn-sm" style={{ width: "100%", marginTop: "16px" }}>
-                                    Sign Up to Post Like This
-                                </Link>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
 
             {/* CTA */}
             <section className={styles.cta}>

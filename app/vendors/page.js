@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Package, ClipboardList, MessageSquareText, ShieldCheck, MapPin, BarChart3, Star } from "lucide-react";
 import styles from "./page.module.css";
 
 export const metadata = {
@@ -13,7 +14,10 @@ export default function VendorsPage() {
             <section className={styles.hero}>
                 <div className={styles.heroBg} />
                 <div className={`container ${styles.heroContent}`}>
-                    <div className={styles.heroBadge}>📦 For Vendors</div>
+                    <div className={styles.heroBadge}>
+                        <Package size={16} className="text-blue-500" />
+                        For Vendors
+                    </div>
                     <h1>
                         Supply to Restaurants{" "}
                         <span className="text-gradient">In Your Zone</span>
@@ -28,9 +32,6 @@ export default function VendorsPage() {
                                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </Link>
-                        <Link href="#preview" className="btn btn-outline btn-lg">
-                            Browse Categories
-                        </Link>
                     </div>
                 </div>
             </section>
@@ -44,12 +45,12 @@ export default function VendorsPage() {
                     </div>
                     <div className={styles.featureGrid}>
                         {[
-                            { icon: "📋", title: "Curated Categories", desc: "Get listed under kitchen equipment, cleaning supplies, food packaging, and more." },
-                            { icon: "💬", title: "Quote Requests", desc: "Restaurants send you direct quote requests. Respond and convert leads to sales." },
-                            { icon: "🛡️", title: "Admin Verified", desc: "Upload your GST certificate or registration. After approval, earn the 'Verified Vendor' badge." },
-                            { icon: "📍", title: "Zone Targeting", desc: "Define your operating zones and get visible only to restaurants in those areas." },
-                            { icon: "📊", title: "Track Leads", desc: "Monitor incoming leads, conversion rates, and sales performance in your dashboard." },
-                            { icon: "🌟", title: "Build Reputation", desc: "Collect ratings and reviews from restaurants. Higher ratings mean more visibility." },
+                            { icon: <ClipboardList size={28} className="text-blue-600" />, title: "Curated Categories", desc: "Get listed under kitchen equipment, cleaning supplies, food packaging, and more." },
+                            { icon: <MessageSquareText size={28} className="text-emerald-500" />, title: "Quote Requests", desc: "Restaurants send you direct quote requests. Respond and convert leads to sales." },
+                            { icon: <ShieldCheck size={28} className="text-teal-600" />, title: "Admin Verified", desc: "Upload your GST certificate or registration. After approval, earn the 'Verified Vendor' badge." },
+                            { icon: <MapPin size={28} className="text-red-500" />, title: "Zone Targeting", desc: "Define your operating zones and get visible only to restaurants in those areas." },
+                            { icon: <BarChart3 size={28} className="text-indigo-500" />, title: "Track Leads", desc: "Monitor incoming leads, conversion rates, and sales performance in your dashboard." },
+                            { icon: <Star size={28} className="text-amber-400" />, title: "Build Reputation", desc: "Collect ratings and reviews from restaurants. Higher ratings mean more visibility." },
                         ].map((f, i) => (
                             <div key={i} className={styles.featureCard}>
                                 <span className={styles.featureIcon}>{f.icon}</span>
@@ -61,38 +62,6 @@ export default function VendorsPage() {
                 </div>
             </section>
 
-            {/* PREVIEW: VENDOR CATEGORIES */}
-            <section id="preview" className={`section ${styles.preview}`}>
-                <div className="container">
-                    <div className="section-header">
-                        <div className={styles.sectionBadge}>Preview Mode</div>
-                        <h2>Sample Vendor Listings</h2>
-                        <p>Here&apos;s what vendor profiles look like. Sign up to create yours!</p>
-                    </div>
-                    <div className={styles.vendorGrid}>
-                        {[
-                            { name: "Fresh Kitchen Supplies", category: "Kitchen Equipment", icon: "🔧", desc: "Commercial-grade kitchen tools, utensils, and cookware for restaurants.", tags: ["Yelahanka", "Koramangala"], zone: "Bengaluru North" },
-                            { name: "CleanPro Services", category: "Cleaning Supplies", icon: "🧹", desc: "Industrial cleaning chemicals, tools, and hygiene supplies for food establishments.", tags: ["Indiranagar", "HSR Layout"], zone: "Bengaluru East" },
-                            { name: "PackRight Solutions", category: "Food Packaging", icon: "📦", desc: "Eco-friendly takeaway containers, bags, and packaging materials for restaurants.", tags: ["JP Nagar", "Whitefield"], zone: "Bengaluru South" },
-                        ].map((v, i) => (
-                            <div key={i} className={styles.vendorCard}>
-                                <div className={styles.vendorIcon}>{v.icon}</div>
-                                <h4>{v.name}</h4>
-                                <div className={styles.vendorCategory}>{v.category}</div>
-                                <p>{v.desc}</p>
-                                <div className={styles.vendorTags}>
-                                    {v.tags.map((t, j) => (
-                                        <span key={j} className={styles.vendorTag}>📍 {t}</span>
-                                    ))}
-                                </div>
-                                <Link href="/register?role=vendor" className="btn btn-outline btn-sm" style={{ width: "100%" }}>
-                                    Request Quote
-                                </Link>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
 
             {/* CTA */}
             <section className={styles.cta}>

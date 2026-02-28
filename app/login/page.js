@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { TriangleAlert } from "lucide-react";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -16,10 +18,12 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setErrorMessage("");
 
         const { error } = await supabase.auth.signInWithPassword({
             email,
@@ -27,7 +31,7 @@ export default function LoginPage() {
         });
 
         if (error) {
-            alert(error.message);
+            setErrorMessage(error.message);
             setLoading(false);
         } else {
             router.push("/dashboard");
@@ -49,6 +53,14 @@ export default function LoginPage() {
 
                 <CardContent>
                     <form onSubmit={handleLogin} className="space-y-4">
+                        {errorMessage ? (
+                            <Alert variant="destructive" className="mb-4">
+                                <TriangleAlert className="h-4 w-4" />
+                                <AlertTitle>Sign-in failed</AlertTitle>
+                                <AlertDescription>{errorMessage}</AlertDescription>
+                            </Alert>
+                        ) : null}
+
                         <div className="space-y-2">
                             <Label htmlFor="email" className="text-zinc-700 font-medium">Email Address <span className="text-red-500">*</span></Label>
                             <Input

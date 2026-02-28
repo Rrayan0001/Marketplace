@@ -6,12 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { TriangleAlert, ScanFace } from "lucide-react";
+import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/validation";
 
 export default function WorkerOnboardingPage() {
     const router = useRouter();
     const supabase = createClient();
     const [loading, setLoading] = useState(false);
     const [file, setFile] = useState(null);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const [formData, setFormData] = useState({
         fullName: "",
@@ -25,8 +29,14 @@ export default function WorkerOnboardingPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setErrorMessage("");
 
         try {
+            const normalizedPhone = normalizeIndianPhone(formData.phone);
+            if (!isValidIndianPhone(normalizedPhone)) {
+                throw new Error("Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.");
+            }
+
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
@@ -56,7 +66,7 @@ export default function WorkerOnboardingPage() {
                 email: user.email,
                 role: 'worker',
                 full_name: formData.fullName,
-                phone: formData.phone,
+                phone: normalizedPhone,
                 status: 'pending'
             });
             if (profileError) throw profileError;
@@ -95,7 +105,7 @@ export default function WorkerOnboardingPage() {
             // Redirect to dashboard (will show pending state)
             router.push("/dashboard");
         } catch (error) {
-            alert("Error: " + error.message);
+            setErrorMessage(error.message);
             setLoading(false);
         }
     };
@@ -111,6 +121,14 @@ export default function WorkerOnboardingPage() {
 
                 <CardContent className="px-6 md:px-12 pb-12">
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {errorMessage ? (
+                            <Alert variant="destructive">
+                                <TriangleAlert className="h-4 w-4" />
+                                <AlertTitle>Couldn&apos;t submit profile</AlertTitle>
+                                <AlertDescription>{errorMessage}</AlertDescription>
+                            </Alert>
+                        ) : null}
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">Full Name <span className="text-red-500">*</span></Label>
@@ -118,16 +136,26 @@ export default function WorkerOnboardingPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">Phone Number <span className="text-red-500">*</span></Label>
-                                <Input type="tel" required value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="h-11" />
+                                <Input
+                                    type="tel"
+                                    required
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: normalizeIndianPhone(e.target.value) })}
+                                    inputMode="numeric"
+                                    maxLength={10}
+                                    pattern="[6-9][0-9]{9}"
+                                    title="Enter a valid 10-digit phone number starting with 6, 7, 8, or 9."
+                                    className="h-11"
+                                />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">Role <span className="text-red-500">*</span></Label>
-                                <select 
+                                <select
                                     className="flex h-11 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-                                    value={formData.workerRole} 
+                                    value={formData.workerRole}
                                     onChange={(e) => setFormData({ ...formData, workerRole: e.target.value })}
                                 >
                                     <option value="chef">Chef / Cook</option>
@@ -150,9 +178,9 @@ export default function WorkerOnboardingPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">Availability <span className="text-red-500">*</span></Label>
-                                <select 
+                                <select
                                     className="flex h-11 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-                                    value={formData.availability} 
+                                    value={formData.availability}
                                     onChange={(e) => setFormData({ ...formData, availability: e.target.value })}
                                 >
                                     <option value="full_time">Full Time</option>
@@ -165,15 +193,30 @@ export default function WorkerOnboardingPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-3 pt-4 border-t border-zinc-100">
-                            <Label className="text-zinc-700 font-medium">Upload Aadhaar / ID Proof <span className="text-red-500">*</span></Label>
-                            <p className="text-sm text-zinc-500">This will be scanned by our AI for verification.</p>
+                        <div className="space-y-4 pt-4 border-t border-zinc-100">
+                            <div>
+                                <Label className="text-zinc-700 font-medium text-lg">Upload Aadhaar / ID Proof <span className="text-red-500">*</span></Label>
+                                <p className="text-sm text-zinc-500 mt-1">This will be scanned by our AI for verification.</p>
+                            </div>
+
+                            <Alert className="bg-blue-50/50 border-blue-200">
+                                <ScanFace className="h-5 w-5 text-blue-600" />
+                                <AlertTitle className="text-blue-900 font-semibold ml-2">AI Verification Guidelines</AlertTitle>
+                                <AlertDescription className="text-blue-800 ml-2 mt-2">
+                                    <ul className="list-disc leading-relaxed pl-4 space-y-1">
+                                        <li>Ensure text is highly clear and readable without blur.</li>
+                                        <li>Avoid glare or reflections from camera flash.</li>
+                                        <li>Ensure all 4 corners of the document are visible inside the frame.</li>
+                                    </ul>
+                                </AlertDescription>
+                            </Alert>
+
                             <Input
                                 type="file"
                                 accept="image/*,.pdf"
                                 onChange={(e) => setFile(e.target.files[0])}
                                 required
-                                className="pt-2.5 pb-2 h-auto text-zinc-600 cursor-pointer"
+                                className="pt-2.5 pb-2 h-auto text-zinc-600 cursor-pointer bg-zinc-50 hover:bg-zinc-100 transition-colors"
                             />
                         </div>
 

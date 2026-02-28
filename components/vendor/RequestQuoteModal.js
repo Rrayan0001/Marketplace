@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { VALIDATION_LIMITS, getDescriptionLength, isValidDescriptionLength } from "@/lib/validation";
 
 export default function RequestQuoteModal({ vendorId, restaurantId, vendorName }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -11,13 +12,19 @@ export default function RequestQuoteModal({ vendorId, restaurantId, vendorName }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const trimmedDetails = details.trim();
+        if (!isValidDescriptionLength(trimmedDetails, VALIDATION_LIMITS.quoteDetails)) {
+            alert(`Request details must be ${VALIDATION_LIMITS.quoteDetails.min}-${VALIDATION_LIMITS.quoteDetails.max} characters.`);
+            return;
+        }
+
         setLoading(true);
 
         try {
             const { error } = await supabase.from('quote_requests').insert({
                 restaurant_id: restaurantId,
                 vendor_id: vendorId,
-                details: details,
+                details: trimmedDetails,
                 status: 'pending'
             });
 
@@ -72,7 +79,13 @@ export default function RequestQuoteModal({ vendorId, restaurantId, vendorName }
                                     value={details}
                                     onChange={e => setDetails(e.target.value)}
                                     autoFocus
+                                    minLength={VALIDATION_LIMITS.quoteDetails.min}
+                                    maxLength={VALIDATION_LIMITS.quoteDetails.max}
                                 ></textarea>
+                                <p className="text-xs text-zinc-500 mt-2">
+                                    {getDescriptionLength(details)}/{VALIDATION_LIMITS.quoteDetails.max} characters
+                                    {" "}({VALIDATION_LIMITS.quoteDetails.min}+ required)
+                                </p>
                             </div>
                             <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                                 <button type="button" className="btn btn-outline" onClick={() => setIsOpen(false)} style={{ flex: 1 }}>Cancel</button>

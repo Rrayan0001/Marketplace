@@ -4,7 +4,8 @@ import Link from "next/link";
 import ApplyButton from "@/components/job/ApplyButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, MapPin, Building2, Calendar, ChefHat, Star, Banknote, Map } from "lucide-react";
+import EmptyState from "@/components/ui/empty-state";
+import { ArrowLeft, Clock, Building2, Calendar, ChefHat, Star, Banknote } from "lucide-react";
 
 export default async function WorkerJobsPage() {
     const supabase = await createClient();
@@ -71,15 +72,11 @@ export default async function WorkerJobsPage() {
             </header>
 
             {(!jobs || jobs.length === 0) ? (
-                <Card className="border-dashed border-2 border-zinc-200">
-                    <CardContent className="flex flex-col items-center justify-center p-16 text-center">
-                        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-                            <ChefHat className="w-8 h-8 text-zinc-400" />
-                        </div>
-                        <h3 className="text-xl font-bold text-zinc-900 mb-2">No Jobs Available Right Now</h3>
-                        <p className="text-zinc-500 max-w-sm">Check back later! Restaurants are constantly posting new positions.</p>
-                    </CardContent>
-                </Card>
+                <EmptyState
+                    icon={<ChefHat className="h-8 w-8" />}
+                    title="No jobs available right now"
+                    description="Check back later. Restaurants are constantly posting new positions."
+                />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {jobs.map((job) => {

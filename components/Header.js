@@ -21,7 +21,7 @@ export default function Header() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [user, setUser] = useState(null);
     const [profile, setProfile] = useState(null);
-    
+
     const router = useRouter();
     const supabase = createClient();
 
@@ -36,8 +36,8 @@ export default function Header() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setUser(user);
-                const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-                if (data) setProfile(data);
+                const { data } = await supabase.from('profiles').select('*').eq('id', user.id).limit(1);
+                if (data && data.length > 0) setProfile(data[0]);
             }
         };
 
@@ -85,7 +85,7 @@ export default function Header() {
                     {user ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button className="outline-none flex items-center gap-2 rounded-full focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all">
+                                <button className={`${styles.avatarTrigger} outline-none flex items-center gap-2 rounded-full focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all`}>
                                     <Avatar className="h-10 w-10 border-2 border-zinc-100 hover:border-primary/50 transition-colors">
                                         <AvatarImage src="" alt={profile?.full_name || user.email} />
                                         <AvatarFallback className="bg-primary/10 text-primary font-medium">
@@ -130,10 +130,10 @@ export default function Header() {
                         </DropdownMenu>
                     ) : (
                         <>
-                            <Link href="/login" className="btn btn-ghost btn-sm">
+                            <Link href="/login" className={`btn btn-ghost btn-sm ${styles.navAction}`}>
                                 Sign In
                             </Link>
-                            <Link href="/register" className="btn btn-primary btn-sm">
+                            <Link href="/register" className={`btn btn-primary btn-sm ${styles.navAction}`}>
                                 Get Started
                             </Link>
                         </>

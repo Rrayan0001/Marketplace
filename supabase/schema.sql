@@ -205,6 +205,44 @@ CREATE TABLE support_tickets (
 );
 
 -- ============================================
+-- DATA VALIDATION CONSTRAINTS
+-- ============================================
+ALTER TABLE profiles
+  ADD CONSTRAINT profiles_phone_indian_format_chk
+  CHECK (
+    phone IS NULL
+    OR btrim(phone) ~ '^[6-9][0-9]{9}$'
+  );
+
+ALTER TABLE vendor_profiles
+  ADD CONSTRAINT vendor_profiles_gst_format_chk
+  CHECK (
+    gst_number IS NULL
+    OR upper(regexp_replace(btrim(gst_number), '\s+', '', 'g')) ~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$'
+  );
+
+ALTER TABLE vendor_profiles
+  ADD CONSTRAINT vendor_profiles_description_len_chk
+  CHECK (
+    description IS NULL
+    OR char_length(btrim(description)) BETWEEN 30 AND 600
+  );
+
+ALTER TABLE jobs
+  ADD CONSTRAINT jobs_description_len_chk
+  CHECK (
+    description IS NULL
+    OR char_length(btrim(description)) BETWEEN 40 AND 1200
+  );
+
+ALTER TABLE quote_requests
+  ADD CONSTRAINT quote_requests_message_len_chk
+  CHECK (
+    message IS NULL
+    OR char_length(btrim(message)) BETWEEN 20 AND 500
+  );
+
+-- ============================================
 -- INDEXES
 -- ============================================
 CREATE INDEX idx_profiles_role ON profiles(role);
@@ -253,3 +291,41 @@ CREATE POLICY "Restaurants can manage own jobs" ON jobs
       WHERE p.id = auth.uid()
     )
   );
+
+-- ============================================
+-- STORAGE BUCKETS & MISSING POLICIES
+-- ============================================
+
+-- Create the 'documents' Storage Bucket safely
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('documents', 'documents', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage RLS Policies for 'documents' bucket
+CREATE POLICY "Public Read Access" ON storage.objects 
+  FOR SELECT USING (bucket_id = 'documents');
+
+CREATE POLICY "Auth Insert" ON storage.objects 
+  FOR INSERT TO authenticated WITH CHECK (bucket_id = 'documents');
+
+CREATE POLICY "Auth Update" ON storage.objects 
+  FOR UPDATE TO authenticated USING (bucket_id = 'documents');
+
+-- Missing Database INSERT policies
+CREATE POLICY "Users can insert their own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can insert their restaurant profile" ON restaurant_profiles
+  FOR INSERT WITH CHECK (profile_id = auth.uid());
+
+CREATE POLICY "Users can insert their worker profile" ON worker_profiles
+  FOR INSERT WITH CHECK (profile_id = auth.uid());
+
+CREATE POLICY "Users can insert their vendor profile" ON vendor_profiles
+  FOR INSERT WITH CHECK (profile_id = auth.uid());
+
+CREATE POLICY "Users can insert their own documents" ON documents
+  FOR INSERT WITH CHECK (profile_id = auth.uid());
+
+CREATE POLICY "Users can read own documents" ON documents
+  FOR SELECT USING (profile_id = auth.uid());
