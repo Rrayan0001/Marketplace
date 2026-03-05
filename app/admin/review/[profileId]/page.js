@@ -242,11 +242,19 @@ export default async function ReviewProfilePage({ params }) {
                 <CardContent className="space-y-4">
                   {doc.file_url ? (
                     <div className="rounded-xl border border-zinc-200 bg-zinc-50 overflow-hidden">
-                      <img
-                        src={doc.file_url}
-                        alt="Verification document preview"
-                        className="w-full h-[320px] object-contain"
-                      />
+                      {doc.file_url.toLowerCase().split('?')[0].endsWith('.pdf') || doc.file_url.toLowerCase().includes('%2fpdf') || doc.file_url.toLowerCase().includes('.pdf') ? (
+                        <iframe
+                          src={doc.file_url}
+                          title="Verification document PDF preview"
+                          className="w-full h-[600px] border-0"
+                        />
+                      ) : (
+                        <img
+                          src={doc.file_url}
+                          alt="Verification document preview"
+                          className="w-full h-[320px] object-contain"
+                        />
+                      )}
                     </div>
                   ) : (
                     <EmptyState

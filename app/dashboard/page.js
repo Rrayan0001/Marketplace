@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Clock, CheckCircle2, AlertTriangle, XCircle, Briefcase, Users, Store, Package, Activity, FileText } from 'lucide-react'
+import LicenseUploader from './license-uploader'
 
 export default async function DashboardPage() {
     const cookieStore = await cookies()
@@ -189,11 +190,11 @@ export default async function DashboardPage() {
     return (
         <div className="container max-w-6xl mx-auto py-12 px-4">
             {profile.status === 'pending' && profile.role === 'restaurant' && (
-                <div className="mb-10 p-5 bg-amber-50/80 border border-amber-200/60 rounded-xl flex items-start gap-4 shadow-sm">
-                    <div className="mt-0.5 bg-amber-100 p-2 rounded-full hidden sm:block">
+                <div className="mb-10 p-5 bg-amber-50/80 border border-amber-200/60 rounded-xl flex flex-col sm:flex-row items-start gap-4 shadow-sm w-full">
+                    <div className="mt-0.5 bg-amber-100 p-2 rounded-full hidden sm:block shrink-0">
                         <AlertTriangle className="w-5 h-5 text-amber-600" />
                     </div>
-                    <div>
+                    <div className="flex-1 w-full min-w-0">
                         <h3 className="text-amber-800 font-semibold mb-1 flex items-center gap-2">
                             <span className="sm:hidden"><AlertTriangle className="w-4 h-4" /></span>
                             Food License Verification Required
@@ -201,6 +202,15 @@ export default async function DashboardPage() {
                         <p className="text-amber-700/90 text-sm leading-relaxed">
                             Welcome! You can freely browse our directory of verified workers and B2B suppliers. However, <strong>you must upload your food license and receive admin approval before you can post jobs or hire staff.</strong>
                         </p>
+
+                        {!latestDoc ? (
+                            <LicenseUploader uid={uid} />
+                        ) : (
+                            <div className="mt-5 inline-flex items-center gap-3 bg-white/60 text-amber-800 px-4 py-3 rounded-lg text-sm font-medium border border-amber-200 shadow-sm w-full sm:w-auto">
+                                <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+                                <span className="truncate">Document ({latestDoc.document_type?.replace('_', ' ')}) uploaded. Waiting for admin approval.</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
