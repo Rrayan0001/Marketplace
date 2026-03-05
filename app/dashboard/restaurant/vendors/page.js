@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import EmptyState from "@/components/ui/empty-state";
-import { ArrowLeft, Store, CheckCircle2, PackageSearch } from "lucide-react";
+import { ArrowLeft02Icon, Store01Icon, TickDouble02Icon, PackageIcon } from "hugeicons-react";
 import RequestQuoteModal from "@/components/vendor/RequestQuoteModal";
 
 export default async function RestaurantVendorsDirectory() {
@@ -49,36 +49,36 @@ export default async function RestaurantVendorsDirectory() {
 
     return (
         <div className="container max-w-6xl mx-auto py-12 px-4">
-            <div className="mb-6">
+            <div className="mb-4 md:mb-6">
                 <Link href="/dashboard" className="inline-flex items-center text-zinc-500 hover:text-zinc-900 transition-colors font-medium text-sm">
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
+                    <ArrowLeft02Icon className="w-4 h-4 mr-2" /> Back to Dashboard
                 </Link>
             </div>
 
-            <header className="mb-10">
-                <h1 className="text-3xl font-bold text-zinc-900 tracking-tight mb-2">B2B Supplier Directory</h1>
-                <p className="text-zinc-500">Discover verified local suppliers for equipment, ingredients, and packaging.</p>
+            <header className="mb-6 md:mb-10">
+                <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 tracking-tight mb-1 md:mb-2">B2B Supplier Directory</h1>
+                <p className="text-sm md:text-base text-zinc-500">Discover verified local suppliers for equipment, ingredients, and packaging.</p>
             </header>
 
             {(!vendors || vendors.length === 0) ? (
                 <EmptyState
-                    icon={<PackageSearch className="h-8 w-8" />}
+                    icon={<PackageIcon className="h-8 w-8 text-primary" />}
                     title="No vendors available"
                     description="No B2B suppliers have joined your area yet."
                 />
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     {vendors.map((vendorObj) => (
-                        <Card key={vendorObj.id} className="flex flex-col overflow-hidden border-zinc-200 shadow-sm transition-all hover:shadow-md">
-                            <CardContent className="p-6 flex-1 flex flex-col">
-                                <div className="flex items-start gap-4 mb-4">
-                                    <div className="w-12 h-12 shrink-0 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center">
-                                        <Store className="w-5 h-5 text-zinc-500" />
+                        <Card key={vendorObj.id} className="flex flex-col overflow-hidden border-zinc-200 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all group">
+                            <CardContent className="p-5 md:p-6 flex-1 flex flex-col">
+                                <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center group-hover:bg-primary/5 group-hover:border-primary/20 transition-colors">
+                                        <Store01Icon className="w-5 h-5 md:w-5 md:h-5 text-zinc-500 group-hover:text-primary transition-colors" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-zinc-900 m-0 mb-1 line-clamp-2">{vendorObj.business_name || vendorObj.profiles?.full_name}</h3>
-                                        <div className="flex items-center text-green-600 text-xs font-semibold">
-                                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Verified Business
+                                        <h3 className="text-base md:text-lg font-bold text-zinc-900 m-0 mb-1 line-clamp-2">{vendorObj.business_name || vendorObj.profiles?.full_name}</h3>
+                                        <div className="flex items-center text-green-600 text-[11px] md:text-xs font-semibold">
+                                            <TickDouble02Icon className="w-3.5 h-3.5 mr-1" /> Verified Business
                                         </div>
                                     </div>
                                 </div>
