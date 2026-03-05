@@ -27,11 +27,15 @@ export default async function AdminLayout({ children }) {
         redirect('/dashboard')
     }
 
+    // Fetch pending approvals count
+    const pendingSnap = await adminDb.collection('profiles').where('status', '==', 'pending').get()
+    const pendingCount = pendingSnap.size
+
     return (
         <div style={{ minHeight: '100vh', background: 'var(--bg-subtle)' }}>
             <Header />
             <div className="flex flex-col md:flex-row gap-6 p-4 pt-[100px] md:p-6 md:pt-[100px] max-w-[1400px] mx-auto">
-                <AdminSidebar />
+                <AdminSidebar pendingCount={pendingCount} />
                 <main className="flex-1 min-w-0">
                     {children}
                 </main>

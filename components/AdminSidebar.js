@@ -20,7 +20,7 @@ const navItems = [
     { href: "/admin/profile", label: "My Profile", icon: UserIcon },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ pendingCount = 0 }) {
     const pathname = usePathname();
 
     return (
@@ -40,6 +40,11 @@ export default function AdminSidebar() {
                         >
                             <Icon className={styles.icon} />
                             <span>{item.label}</span>
+                            {item.href === "/admin/queue" && pendingCount > 0 && (
+                                <span className="ml-auto bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center justify-center min-w-[20px] shadow-sm">
+                                    {pendingCount}
+                                </span>
+                            )}
                         </Link>
                     );
                 })}
