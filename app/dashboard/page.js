@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Clock01Icon, TickDouble02Icon, Alert02Icon, Cancel01Icon, Briefcase02Icon, UserGroupIcon, Store01Icon, PackageIcon, Activity01Icon, Document01Icon } from 'hugeicons-react'
+import { Clock01Icon, TickDouble02Icon, Alert02Icon, Cancel01Icon, Briefcase02Icon, UserGroupIcon, Store01Icon, PackageIcon, Activity01Icon, File01Icon } from 'hugeicons-react'
 import LicenseUploader from './license-uploader'
 
 export default async function DashboardPage() {
@@ -116,7 +116,7 @@ export default async function DashboardPage() {
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pl-2 p-4 bg-zinc-50/50 rounded-lg border border-zinc-100">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-blue-100/80 flex items-center justify-center shrink-0">
-                                                <Document01Icon className="w-5 h-5 text-blue-600" />
+                                                <File01Icon className="w-5 h-5 text-blue-600" />
                                             </div>
                                             <span className="font-medium text-zinc-800 capitalize truncate line-clamp-1">{latestDoc.document_type?.replace('_', ' ')}</span>
                                         </div>

@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allows anyone to read and write any document in the documents folder
+    // In production, we should restrict to authenticated users
+    match /documents/{allPaths=**} {
+      allow read, write: if true;
+    }
+    
+    // Default fallback (deny everything else)
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
