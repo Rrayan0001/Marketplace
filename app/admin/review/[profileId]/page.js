@@ -71,6 +71,7 @@ export default async function ReviewProfilePage({ params }) {
         profile.role === "vendor" ? "vendor_profiles" : null;
 
   if (roleCollection) {
+    // Try querying by profile_id field first
     const roleSnap = await adminDb.collection(roleCollection)
       .where("profile_id", "==", profileId)
       .limit(1)
@@ -78,6 +79,12 @@ export default async function ReviewProfilePage({ params }) {
 
     if (!roleSnap.empty) {
       roleData = roleSnap.docs[0].data();
+    } else {
+      // Fallback: the onboarding form uses setDoc with uid as doc ID
+      const directSnap = await adminDb.collection(roleCollection).doc(profileId).get();
+      if (directSnap.exists) {
+        roleData = directSnap.data();
+      }
     }
   }
 

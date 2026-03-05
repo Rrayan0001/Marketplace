@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Clock, CheckCircle2, AlertTriangle, XCircle, Briefcase, Users, Store, Package, Activity, FileText } from 'lucide-react'
+import { Clock01Icon, TickDouble02Icon, Alert02Icon, Cancel01Icon, Briefcase02Icon, UserGroupIcon, Store01Icon, PackageIcon, Activity01Icon, Document01Icon } from 'hugeicons-react'
 import LicenseUploader from './license-uploader'
 
 export default async function DashboardPage() {
@@ -96,7 +96,7 @@ export default async function DashboardPage() {
                             <div className="mx-auto w-24 h-24 bg-amber-100/50 rounded-full flex items-center justify-center mb-8 shadow-inner relative">
                                 <div className="absolute inset-0 border-4 border-amber-200/40 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
                                 <div className="absolute inset-2 bg-amber-100 rounded-full flex items-center justify-center shadow-sm">
-                                    <Clock className="w-10 h-10 text-amber-600" />
+                                    <Clock01Icon className="w-10 h-10 text-amber-600" />
                                 </div>
                             </div>
                             <CardTitle className="text-3xl font-bold tracking-tight text-zinc-900 mb-3">Profile Under Review</CardTitle>
@@ -111,12 +111,12 @@ export default async function DashboardPage() {
                                 <div className="bg-white rounded-xl p-6 border border-zinc-200/60 shadow-sm text-left relative overflow-hidden group hover:border-amber-200 transition-colors">
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400 group-hover:bg-amber-500 transition-colors" />
                                     <h4 className="flex items-center gap-2 font-semibold text-zinc-900 mb-5 pl-2">
-                                        <Activity className="w-4 h-4 text-amber-500" /> Document Verification Status
+                                        <Activity01Icon className="w-4 h-4 text-amber-500" /> Document Verification Status
                                     </h4>
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pl-2 p-4 bg-zinc-50/50 rounded-lg border border-zinc-100">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-blue-100/80 flex items-center justify-center shrink-0">
-                                                <FileText className="w-5 h-5 text-blue-600" />
+                                                <Document01Icon className="w-5 h-5 text-blue-600" />
                                             </div>
                                             <span className="font-medium text-zinc-800 capitalize truncate line-clamp-1">{latestDoc.document_type?.replace('_', ' ')}</span>
                                         </div>
@@ -155,7 +155,7 @@ export default async function DashboardPage() {
                         <CardHeader className="pt-12 pb-6 text-center bg-gradient-to-b from-red-50/50 to-transparent">
                             <div className="mx-auto w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-8 shadow-inner ring-4 ring-red-50/50">
                                 <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center shadow-sm">
-                                    <XCircle className="w-10 h-10 text-red-600" />
+                                    <Cancel01Icon className="w-10 h-10 text-red-600" />
                                 </div>
                             </div>
                             <CardTitle className="text-3xl font-bold tracking-tight text-zinc-900 mb-3">Profile Not Approved</CardTitle>
@@ -167,7 +167,7 @@ export default async function DashboardPage() {
                         <CardContent className="px-6 sm:px-10 pb-10">
                             <div className="bg-red-50/50 rounded-xl p-6 border border-red-100 text-left">
                                 <h4 className="flex items-center gap-2 font-semibold text-red-900 mb-3">
-                                    <AlertTriangle className="w-5 h-5 text-red-600" /> Admin Notes
+                                    <Alert02Icon className="w-5 h-5 text-red-600" /> Admin Notes
                                 </h4>
                                 <p className="text-zinc-700 text-sm leading-relaxed pl-7">
                                     {profile.admin_notes || "Please double check your uploaded documents for any discrepancies and try contacting support."}
@@ -192,11 +192,11 @@ export default async function DashboardPage() {
             {profile.status === 'pending' && profile.role === 'restaurant' && (
                 <div className="mb-10 p-5 bg-amber-50/80 border border-amber-200/60 rounded-xl flex flex-col sm:flex-row items-start gap-4 shadow-sm w-full">
                     <div className="mt-0.5 bg-amber-100 p-2 rounded-full hidden sm:block shrink-0">
-                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                        <Alert02Icon className="w-5 h-5 text-amber-600" />
                     </div>
                     <div className="flex-1 w-full min-w-0">
                         <h3 className="text-amber-800 font-semibold mb-1 flex items-center gap-2">
-                            <span className="sm:hidden"><AlertTriangle className="w-4 h-4" /></span>
+                            <span className="sm:hidden"><Alert02Icon className="w-4 h-4" /></span>
                             Food License Verification Required
                         </h3>
                         <p className="text-amber-700/90 text-sm leading-relaxed">
@@ -207,7 +207,7 @@ export default async function DashboardPage() {
                             <LicenseUploader uid={uid} />
                         ) : (
                             <div className="mt-5 inline-flex items-center gap-3 bg-white/60 text-amber-800 px-4 py-3 rounded-lg text-sm font-medium border border-amber-200 shadow-sm w-full sm:w-auto">
-                                <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+                                <Clock01Icon className="w-5 h-5 text-amber-600 shrink-0" />
                                 <span className="truncate">Document ({latestDoc.document_type?.replace('_', ' ')}) uploaded. Waiting for admin approval.</span>
                             </div>
                         )}
@@ -233,7 +233,7 @@ export default async function DashboardPage() {
                         <Card className="border-primary/20 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
                             <div className="absolute top-0 left-0 right-0 h-1 bg-primary"></div>
                             <CardHeader>
-                                <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2"><Briefcase className="w-5 h-5 text-primary" /></div>
+                                <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2"><Briefcase02Icon className="w-5 h-5 text-primary" /></div>
                                 <CardTitle>Post a New Job</CardTitle>
                                 <CardDescription>Hire verified chefs, waiters, and kitchen helpers in your zone.</CardDescription>
                             </CardHeader>
@@ -251,7 +251,7 @@ export default async function DashboardPage() {
                         </Card>
                         <Card className="shadow-sm border-zinc-200 transition-all hover:shadow-md">
                             <CardHeader>
-                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><Users className="w-5 h-5 text-zinc-600" /></div>
+                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><UserGroupIcon className="w-5 h-5 text-zinc-600" /></div>
                                 <CardTitle>Manage Jobs</CardTitle>
                                 <CardDescription>Review applications and make hiring decisions.</CardDescription>
                             </CardHeader>
@@ -263,7 +263,7 @@ export default async function DashboardPage() {
                         </Card>
                         <Card className="shadow-sm border-zinc-200 transition-all hover:shadow-md">
                             <CardHeader>
-                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><Store className="w-5 h-5 text-zinc-600" /></div>
+                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><Store01Icon className="w-5 h-5 text-zinc-600" /></div>
                                 <CardTitle>B2B Suppliers</CardTitle>
                                 <CardDescription>Find packaging, equipment, and ingredients.</CardDescription>
                             </CardHeader>
@@ -275,7 +275,7 @@ export default async function DashboardPage() {
                         </Card>
                         <Card className="shadow-sm border-zinc-200 transition-all hover:shadow-md md:col-span-2 lg:col-span-3">
                             <CardHeader>
-                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><Users className="w-5 h-5 text-zinc-600" /></div>
+                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><UserGroupIcon className="w-5 h-5 text-zinc-600" /></div>
                                 <CardTitle>Worker Directory</CardTitle>
                                 <CardDescription>Proactively browse active verified workers in your zone.</CardDescription>
                             </CardHeader>
@@ -293,7 +293,7 @@ export default async function DashboardPage() {
                         <Card className="border-primary/20 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
                             <div className="absolute top-0 left-0 right-0 h-1 bg-primary"></div>
                             <CardHeader>
-                                <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2"><Briefcase className="w-5 h-5 text-primary" /></div>
+                                <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2"><Briefcase02Icon className="w-5 h-5 text-primary" /></div>
                                 <CardTitle>Find Jobs</CardTitle>
                                 <CardDescription>Browse active job postings from restaurants in your zone.</CardDescription>
                             </CardHeader>
@@ -305,7 +305,7 @@ export default async function DashboardPage() {
                         </Card>
                         <Card className="shadow-sm border-zinc-200 transition-all hover:shadow-md">
                             <CardHeader>
-                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><Activity className="w-5 h-5 text-zinc-600" /></div>
+                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><Activity01Icon className="w-5 h-5 text-zinc-600" /></div>
                                 <CardTitle>My Applications</CardTitle>
                                 <CardDescription>Track the status of jobs you have applied for.</CardDescription>
                             </CardHeader>
@@ -322,7 +322,7 @@ export default async function DashboardPage() {
                     <Card className="border-primary/20 shadow-sm relative overflow-hidden transition-all hover:shadow-md lg:col-span-2">
                         <div className="absolute top-0 left-0 right-0 h-1 bg-primary"></div>
                         <CardHeader>
-                            <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2"><Package className="w-5 h-5 text-primary" /></div>
+                            <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2"><PackageIcon className="w-5 h-5 text-primary" /></div>
                             <CardTitle>Quote Requests</CardTitle>
                             <CardDescription>Manage incoming B2B leads from local restaurants.</CardDescription>
                         </CardHeader>
@@ -382,7 +382,7 @@ export default async function DashboardPage() {
             <Card className="shadow-sm border-zinc-200">
                 <CardContent className="p-12 text-center">
                     <div className="mx-auto w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-4">
-                        <Clock className="w-6 h-6 text-zinc-400" />
+                        <Clock01Icon className="w-6 h-6 text-zinc-400" />
                     </div>
                     <p className="text-zinc-500 font-medium">No recent activity to show.</p>
                 </CardContent>

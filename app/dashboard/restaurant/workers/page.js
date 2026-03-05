@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import EmptyState from "@/components/ui/empty-state";
-import { ArrowLeft, User, CheckCircle2, MessageSquare, ChefHat } from "lucide-react";
+import { ArrowLeft02Icon, UserIcon, TickDouble02Icon, Message01Icon, ChefHatIcon } from "hugeicons-react";
 
 export default async function WorkerDirectoryPage() {
     const cookieStore = await cookies();
@@ -52,57 +52,56 @@ export default async function WorkerDirectoryPage() {
         .sort((a, b) => new Date(b.profiles.created_at) - new Date(a.profiles.created_at));
 
     return (
-        <div className="container max-w-6xl mx-auto py-12 px-4">
-            <div className="mb-6">
+        <div className="container max-w-6xl mx-auto py-8 md:py-12 px-4">
+            <div className="mb-4 md:mb-6">
                 <Link href="/dashboard" className="inline-flex items-center text-zinc-500 hover:text-zinc-900 transition-colors font-medium text-sm">
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
+                    <ArrowLeft02Icon className="w-4 h-4 mr-2" /> Back to Dashboard
                 </Link>
             </div>
 
-            <header className="mb-10">
-                <h1 className="text-3xl font-bold text-zinc-900 tracking-tight mb-2">Active Worker Directory</h1>
-                <p className="text-zinc-500">Browse verified, active workers in your area ready to be hired today.</p>
+            <header className="mb-6 md:mb-10">
+                <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 tracking-tight mb-1 md:mb-2">Active Worker Directory</h1>
+                <p className="text-sm md:text-base text-zinc-500">Browse verified, active workers in your area ready to be hired today.</p>
             </header>
 
             {(!workers || workers.length === 0) ? (
                 <EmptyState
-                    icon={<ChefHat className="h-8 w-8" />}
+                    icon={<ChefHatIcon className="h-8 w-8 text-primary" />}
                     title="No workers available right now"
                     description="Workers in your area might be fully booked. Check back soon."
                 />
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     {workers.map((workerObj) => (
-                        <Card key={workerObj.id} className="flex flex-col overflow-hidden border-zinc-200 shadow-sm transition-all hover:shadow-md">
-                            <CardContent className="p-6 flex-1 flex flex-col">
-                                <div className="flex items-start gap-4 mb-5">
-                                    <div className="w-12 h-12 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
-                                        <User className="w-5 h-5 text-primary" />
+                        <Card key={workerObj.id} className="flex flex-col overflow-hidden border-zinc-200 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all group">
+                            <CardContent className="p-5 md:p-6 flex-1 flex flex-col">
+                                <div className="flex items-start gap-3 md:gap-4 mb-4 md:mb-5">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                                        <UserIcon className="w-5 h-5 text-primary" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-zinc-900 m-0 mb-1 line-clamp-1">{workerObj.profiles?.full_name || 'Anonymous'}</h3>
-                                        <div className="flex items-center text-green-600 text-xs font-semibold">
-                                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Verified Background
+                                        <h3 className="text-base md:text-lg font-bold text-zinc-900 m-0 mb-1 line-clamp-1">{workerObj.profiles?.full_name || 'Anonymous'}</h3>
+                                        <div className="flex items-center text-green-600 text-[11px] md:text-xs font-semibold">
+                                            <TickDouble02Icon className="w-3.5 h-3.5 mr-1" /> Verified Background
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex flex-wrap gap-2 mb-6">
-                                    <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 capitalize font-semibold shadow-sm">
+                                <div className="flex flex-wrap gap-1.5 md:gap-2 mb-4 md:mb-6">
+                                    <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 capitalize font-semibold shadow-sm text-[11px] md:text-xs">
                                         {workerObj.role_type.replace('_', ' ')}
                                     </Badge>
-                                    <Badge variant="outline" className="bg-zinc-50 text-zinc-600 border-zinc-200 font-medium">
+                                    <Badge variant="outline" className="bg-zinc-50 text-zinc-600 border-zinc-200 font-medium text-[11px] md:text-xs">
                                         {workerObj.years_experience}+ Yrs Exp
                                     </Badge>
-                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 capitalize font-medium">
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 capitalize font-medium text-[11px] md:text-xs">
                                         {workerObj.availability.replace('_', ' ')}
                                     </Badge>
                                 </div>
 
-                                <div className="mt-auto pt-6 border-t border-zinc-100">
-                                    {/* Normally we'd pass a specific worker ID into a messaging modal or custom invite flow */}
-                                    <Button variant="outline" className="w-full h-10 shadow-sm">
-                                        <MessageSquare className="w-4 h-4 mr-2" /> Message / Invite
+                                <div className="mt-auto pt-4 md:pt-6 border-t border-zinc-100">
+                                    <Button variant="outline" className="w-full h-9 md:h-10 shadow-sm group-hover:border-primary/30 group-hover:text-primary transition-colors text-sm">
+                                        <Message01Icon className="w-4 h-4 mr-2" /> Message / Invite
                                     </Button>
                                 </div>
                             </CardContent>
