@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import styles from "./Header.module.css";
 import { auth, db } from "@/lib/firebase/config";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -25,6 +25,8 @@ export default function Header() {
     const [profile, setProfile] = useState(null);
 
     const router = useRouter();
+    const pathname = usePathname();
+    const isAdminLogin = pathname === '/admin-login';
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -68,7 +70,7 @@ export default function Header() {
                                 <Shield className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
                                 Admin Control Room
                             </Link>
-                        ) : (
+                        ) : !isAdminLogin ? (
                             <>
                                 <Link href="/restaurants" className={styles.navLink} onClick={() => setMobileOpen(false)}>
                                     For Restaurants
@@ -80,7 +82,7 @@ export default function Header() {
                                     For Vendors
                                 </Link>
                             </>
-                        )}
+                        ) : null}
                     </nav>
 
                     <div className={styles.actions}>
@@ -140,7 +142,7 @@ export default function Header() {
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                        ) : (
+                        ) : !isAdminLogin ? (
                             <>
                                 <Link href="/login" className={`btn btn-ghost btn-sm ${styles.navAction}`}>
                                     Sign In
@@ -149,7 +151,7 @@ export default function Header() {
                                     Get Started
                                 </Link>
                             </>
-                        )}
+                        ) : null}
                     </div>
 
                     <button
@@ -167,7 +169,7 @@ export default function Header() {
             {mobileOpen && (
                 <div className={styles.mobileMenu}>
                     <nav className={styles.mobileNav}>
-                        {profile?.role !== 'admin' && (
+                        {profile?.role !== 'admin' && !isAdminLogin && (
                             <>
                                 <Link href="/restaurants" className={styles.mobileNavLink} onClick={() => setMobileOpen(false)}>
                                     For Restaurants
@@ -208,7 +210,7 @@ export default function Header() {
                                     <LogOut className="mr-2 h-4 w-4" /> Sign Out
                                 </button>
                             </div>
-                        ) : (
+                        ) : !isAdminLogin ? (
                             <>
                                 <Link href="/login" className="btn btn-outline" style={{ width: "100%", justifyContent: "center" }} onClick={() => setMobileOpen(false)}>
                                     Sign In
@@ -217,7 +219,7 @@ export default function Header() {
                                     Get Started
                                 </Link>
                             </>
-                        )}
+                        ) : null}
                     </div>
                 </div>
             )}
