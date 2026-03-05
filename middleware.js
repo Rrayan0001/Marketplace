@@ -7,11 +7,11 @@ export async function middleware(request) {
     const session = request.cookies.get('session')?.value;
     const { pathname } = request.nextUrl;
 
-    const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
+    const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/admin-login');
     const isProtectedRoute =
         pathname.startsWith('/dashboard') ||
         pathname.startsWith('/onboarding') ||
-        pathname.startsWith('/admin');
+        (pathname.startsWith('/admin') && !pathname.startsWith('/admin-login'));
 
     if (!isProtectedRoute && !isAuthRoute) {
         return NextResponse.next();
