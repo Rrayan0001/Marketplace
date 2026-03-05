@@ -85,7 +85,7 @@ export default async function DashboardPage() {
         analytics.pendingApps = leadsSnap.size
     }
 
-    if (profile.status === 'pending') {
+    if (profile.status === 'pending' && profile.role !== 'restaurant') {
         return (
             <div className="min-h-[80vh] flex items-center justify-center py-12 px-4">
                 <div className="max-w-xl w-full">
@@ -188,6 +188,23 @@ export default async function DashboardPage() {
     // Approved! Regular dashboard
     return (
         <div className="container max-w-6xl mx-auto py-12 px-4">
+            {profile.status === 'pending' && profile.role === 'restaurant' && (
+                <div className="mb-10 p-5 bg-amber-50/80 border border-amber-200/60 rounded-xl flex items-start gap-4 shadow-sm">
+                    <div className="mt-0.5 bg-amber-100 p-2 rounded-full hidden sm:block">
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                        <h3 className="text-amber-800 font-semibold mb-1 flex items-center gap-2">
+                            <span className="sm:hidden"><AlertTriangle className="w-4 h-4" /></span>
+                            Food License Verification Required
+                        </h3>
+                        <p className="text-amber-700/90 text-sm leading-relaxed">
+                            Welcome! You can freely browse our directory of verified workers and B2B suppliers. However, <strong>you must upload your food license and receive admin approval before you can post jobs or hire staff.</strong>
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-zinc-900 mb-1">Welcome back, {profile.full_name || 'User'}!</h1>
@@ -211,9 +228,15 @@ export default async function DashboardPage() {
                                 <CardDescription>Hire verified chefs, waiters, and kitchen helpers in your zone.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Link href="/dashboard/restaurant/post-job" className="w-full">
-                                    <Button className="w-full h-10 shadow-sm">Create Job Post</Button>
-                                </Link>
+                                {profile.status === 'pending' ? (
+                                    <Button className="w-full h-10 shadow-sm opacity-50 cursor-not-allowed bg-zinc-100 text-zinc-400 border border-zinc-200 hover:bg-zinc-100" title="License required to post jobs">
+                                        Create Job Post (Locked)
+                                    </Button>
+                                ) : (
+                                    <Link href="/dashboard/restaurant/post-job" className="w-full">
+                                        <Button className="w-full h-10 shadow-sm">Create Job Post</Button>
+                                    </Link>
+                                )}
                             </CardContent>
                         </Card>
                         <Card className="shadow-sm border-zinc-200 transition-all hover:shadow-md">

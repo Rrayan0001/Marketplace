@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { db, auth } from "@/lib/firebase/config";
-import { collection, addDoc, getDocs, query, where, limit } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where, limit, doc, getDoc } from "firebase/firestore";
 import Link from "next/link";
 import { ArrowLeft, Briefcase, TriangleAlert } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,12 @@ export default function PostJobPage() {
 
             const user = auth.currentUser;
             if (!user) throw new Error("Not authenticated");
+
+            // Check main profile status
+            const profileSnap = await getDoc(doc(db, 'profiles', user.uid));
+            if (!profileSnap.exists() || profileSnap.data().status !== 'approved') {
+                throw new Error("Your restaurant profile must be approved before you can post jobs. Please ensure your food license is verified.");
+            }
 
             // Get restaurant profile ID
             const q = query(collection(db, 'restaurant_profiles'), where('profile_id', '==', user.uid), limit(1));

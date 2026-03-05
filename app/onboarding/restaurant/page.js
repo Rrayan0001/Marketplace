@@ -164,8 +164,8 @@ export default function RestaurantOnboardingPage() {
 
                         <div className="space-y-4 pt-4 border-t border-zinc-100">
                             <div>
-                                <Label className="text-zinc-700 font-medium text-lg">Upload Food License <span className="text-red-500">*</span></Label>
-                                <p className="text-sm text-zinc-500 mt-1">This will be scanned by our AI for verification.</p>
+                                <Label className="text-zinc-700 font-medium text-lg">Upload Food License <span className="text-zinc-500 text-sm font-normal ml-2">(Optional for now)</span></Label>
+                                <p className="text-sm text-zinc-500 mt-1">You can provide this later to unlock job posting.</p>
                             </div>
                             <Alert className="bg-blue-50/50 border-blue-200">
                                 <ScanFace className="h-5 w-5 text-blue-600" />
@@ -181,7 +181,6 @@ export default function RestaurantOnboardingPage() {
                             <Input
                                 type="file" accept="image/*,.pdf"
                                 onChange={e => setFile(e.target.files[0])}
-                                required
                                 className="pt-2.5 pb-2 h-auto text-zinc-600 cursor-pointer bg-zinc-50 hover:bg-zinc-100 transition-colors"
                             />
                         </div>
