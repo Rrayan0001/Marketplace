@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { adminDb } from '@/lib/firebase/admin';
 import { verifyDocumentWithAI } from '@/lib/groq';
 
 export async function POST(request) {
@@ -10,27 +10,21 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Missing required parameters.' }, { status: 400 });
         }
 
-        const supabase = await createClient();
+        // 1. Fetch the document record from Firestore
+        const docRef = adminDb.collection('documents').doc(documentId);
+        const docSnap = await docRef.get();
 
-        // 1. Fetch the document record
-        const { data: document, error: fetchError } = await supabase
-            .from('documents')
-            .select('*')
-            .eq('id', documentId)
-            .eq('profile_id', profileId)
-            .single();
-
-        if (fetchError || !document) {
+        if (!docSnap.exists || docSnap.data().profile_id !== profileId) {
             return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 
-        // 2. We already have the public file_url (since Bucket is Public)
+        const document = docSnap.data();
         const publicUrl = document.file_url;
 
-        // 3. Update status to 'processing'
-        await supabase.from('documents').update({ ai_status: 'processing' }).eq('id', documentId);
+        // 2. Update status to 'processing'
+        await docRef.update({ ai_status: 'processing' });
 
-        // 4. Call Groq Vision API
+        // 3. Call Groq Vision API
         let extractedData = null;
         let aiStatus = 'failed';
         let aiFlags = [];
@@ -38,7 +32,6 @@ export async function POST(request) {
         try {
             extractedData = await verifyDocumentWithAI(publicUrl, document.document_type);
 
-            // Determine pass/flag based on confidence and format
             if (extractedData.is_valid_format && extractedData.confidence_score > 0.8) {
                 aiStatus = 'passed';
             } else {
@@ -50,20 +43,13 @@ export async function POST(request) {
             aiFlags.push(aiError.message || "Failed to process image through AI.");
         }
 
-        // 5. Update the Database with AI results
-        const { error: updateError } = await supabase
-            .from('documents')
-            .update({
-                ai_status: aiStatus,
-                ai_extracted_data: extractedData,
-                ai_confidence_score: extractedData?.confidence_score || null,
-                ai_flags: aiFlags.length > 0 ? aiFlags : null
-            })
-            .eq('id', documentId);
-
-        if (updateError) {
-            throw updateError;
-        }
+        // 4. Update Firestore with AI results
+        await docRef.update({
+            ai_status: aiStatus,
+            ai_extracted_data: extractedData,
+            ai_confidence_score: extractedData?.confidence_score || null,
+            ai_flags: aiFlags.length > 0 ? aiFlags : null,
+        });
 
         return NextResponse.json({ success: true, aiStatus, extractedData });
 

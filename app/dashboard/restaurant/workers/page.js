@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,41 +9,47 @@ import EmptyState from "@/components/ui/empty-state";
 import { ArrowLeft, User, CheckCircle2, MessageSquare, ChefHat } from "lucide-react";
 
 export default async function WorkerDirectoryPage() {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session")?.value;
+    if (!session) redirect('/login');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/login');
+    let decodedToken;
+    try {
+        decodedToken = await adminAuth.verifySessionCookie(session, true);
+    } catch {
+        redirect('/login');
+    }
 
-    const { data: restaurant } = await supabase
-        .from('restaurant_profiles')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single();
+    const uid = decodedToken.uid;
 
-    if (!restaurant) redirect('/dashboard');
+    const restaurantSnap = await adminDb.collection('restaurant_profiles').where('profile_id', '==', uid).limit(1).get();
+    if (restaurantSnap.empty) redirect('/dashboard');
 
     // Fetch workers whose profiles are approved AND they are actively available
-    const { data: workers, error } = await supabase
-        .from('worker_profiles')
-        .select(`
-      id,
-      role_type,
-      years_experience,
-      availability,
-      is_actively_available,
-      profiles!inner (
-        full_name,
-        status,
-        created_at
-      )
-    `)
-        .eq('is_actively_available', true)
-        .eq('profiles.status', 'approved')
-        .order('profiles(created_at)', { ascending: false });
+    const workersSnap = await adminDb.collection('worker_profiles')
+        .where('is_actively_available', '==', true)
+        .get();
 
-    if (error) {
-        console.error("Error fetching worker directory:", error);
-    }
+    const workersFetched = await Promise.all(workersSnap.docs.map(async (doc) => {
+        const workerData = doc.data();
+
+        // Fetch profile to check status and name
+        const profileSnap = await adminDb.collection('profiles').doc(workerData.profile_id).get();
+        const profileData = profileSnap.exists ? profileSnap.data() : null;
+
+        if (profileData?.status !== 'approved') return null;
+
+        return {
+            id: doc.id,
+            ...workerData,
+            profiles: profileData
+        };
+    }));
+
+    // Filter out nulls and in-memory sort
+    const workers = workersFetched
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.profiles.created_at) - new Date(a.profiles.created_at));
 
     return (
         <div className="container max-w-6xl mx-auto py-12 px-4">

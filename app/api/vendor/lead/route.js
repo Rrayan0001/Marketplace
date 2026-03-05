@@ -1,21 +1,18 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { cookies } from 'next/headers';
 
 export async function POST(request) {
     try {
-        const supabase = await createClient();
+        const cookieStore = await cookies();
+        const session = cookieStore.get('session')?.value;
+        if (!session) return NextResponse.redirect(new URL('/login', request.url));
 
-        // 1. Verify caller
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return NextResponse.redirect(new URL('/login', request.url));
+        // 1. Verify caller is a vendor
+        const decodedToken = await adminAuth.verifySessionCookie(session, true);
+        const vendorProfileSnap = await adminDb.collection('vendor_profiles').doc(decodedToken.uid).get();
 
-        const { data: vendor } = await supabase
-            .from('vendor_profiles')
-            .select('id')
-            .eq('profile_id', user.id)
-            .single();
-
-        if (!vendor) {
+        if (!vendorProfileSnap.exists()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
@@ -29,31 +26,21 @@ export async function POST(request) {
         }
 
         // 3. Verify the lead belongs to this vendor
-        const { data: leadOwnership } = await supabase
-            .from('quote_requests')
-            .select('vendor_id')
-            .eq('id', leadId)
-            .single();
+        const leadRef = adminDb.collection('quote_requests').doc(leadId);
+        const leadSnap = await leadRef.get();
 
-        if (leadOwnership?.vendor_id !== vendor.id) {
+        if (!leadSnap.exists() || leadSnap.data().vendor_id !== decodedToken.uid) {
             return NextResponse.json({ error: 'Forbidden. This lead is assigned to another vendor.' }, { status: 403 });
         }
 
         // 4. Update the lead status
         const newStatus = action === 'accepted' ? 'accepted' : 'declined';
+        await leadRef.update({
+            status: newStatus,
+            updated_at: new Date().toISOString(),
+        });
 
-        const { error: updateError } = await supabase
-            .from('quote_requests')
-            .update({
-                status: newStatus,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', leadId);
-
-        if (updateError) throw updateError;
-
-        // Redirect back to the leads page
-        return NextResponse.redirect(new URL(`/dashboard/vendor/leads`, request.url), 303);
+        return NextResponse.redirect(new URL('/dashboard/vendor/leads', request.url), 303);
 
     } catch (error) {
         console.error("Lead Update Error:", error);

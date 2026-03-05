@@ -1,21 +1,18 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { cookies } from 'next/headers';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request) {
     try {
-        const supabase = await createClient();
+        const cookieStore = await cookies();
+        const session = cookieStore.get('session')?.value;
+        if (!session) return NextResponse.redirect(new URL('/login', request.url));
 
         // 1. Verify caller is admin
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return NextResponse.redirect(new URL('/login', request.url));
-
-        const { data: adminProfile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        if (adminProfile?.role !== 'admin') {
+        const decodedToken = await adminAuth.verifySessionCookie(session, true);
+        const adminProfileSnap = await adminDb.collection('profiles').doc(decodedToken.uid).get();
+        if (adminProfileSnap.data()?.role !== 'admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
@@ -29,32 +26,29 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
         }
 
-        // 3. Update the profile status
+        // 3. Update the profile status in Firestore
         const newStatus = action === 'approve' ? 'approved' : 'rejected';
+        await adminDb.collection('profiles').doc(profileId).update({
+            status: newStatus,
+            admin_notes: adminNotes,
+            updated_at: new Date().toISOString(),
+        });
 
-        const { error: updateError } = await supabase
-            .from('profiles')
-            .update({
-                status: newStatus,
-                admin_notes: adminNotes,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', profileId);
-
-        if (updateError) throw updateError;
-
-        // 4. Also update document admin_status if applicable
-        await supabase
-            .from('documents')
-            .update({
+        // 4. Update documents for this profile
+        const docsSnap = await adminDb.collection('documents')
+            .where('profile_id', '==', profileId)
+            .get();
+        const batch = adminDb.batch();
+        docsSnap.forEach(doc => {
+            batch.update(doc.ref, {
                 admin_status: newStatus,
                 admin_notes: adminNotes,
-                reviewed_by: user.id,
-                reviewed_at: new Date().toISOString()
-            })
-            .eq('profile_id', profileId);
+                reviewed_by: decodedToken.uid,
+                reviewed_at: new Date().toISOString(),
+            });
+        });
+        await batch.commit();
 
-        // Redirect back to queue
         return NextResponse.redirect(new URL('/admin', request.url), 303);
 
     } catch (error) {

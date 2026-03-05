@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { auth, db, storage } from "@/lib/firebase/config";
+import { doc, setDoc, addDoc, collection } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +14,6 @@ import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/validation";
 
 export default function WorkerOnboardingPage() {
     const router = useRouter();
-    const supabase = createClient();
     const [loading, setLoading] = useState(false);
     const [file, setFile] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
@@ -37,72 +38,60 @@ export default function WorkerOnboardingPage() {
                 throw new Error("Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.");
             }
 
-            const { data: { user } } = await supabase.auth.getUser();
+            const user = auth.currentUser;
             if (!user) throw new Error("Not authenticated");
 
             let documentUrl = "";
 
-            // 1. Upload File to Supabase Storage
+            // 1. Upload File to Firebase Storage
             if (file) {
                 const fileExt = file.name.split('.').pop();
-                const fileName = `${user.id}_aadhaar_${Date.now()}.${fileExt}`;
-
-                const { error: uploadError, data } = await supabase.storage
-                    .from('documents')
-                    .upload(fileName, file);
-
-                if (uploadError) throw uploadError;
-
-                const { data: publicData } = supabase.storage
-                    .from('documents')
-                    .getPublicUrl(fileName);
-
-                documentUrl = publicData.publicUrl;
+                const fileName = `documents/${user.uid}_aadhaar_${Date.now()}.${fileExt}`;
+                const storageRef = ref(storage, fileName);
+                await uploadBytes(storageRef, file);
+                documentUrl = await getDownloadURL(storageRef);
             }
 
-            // 2. Create Profile in 'profiles' table first
-            const { error: profileError } = await supabase.from('profiles').insert({
-                id: user.id,
+            // 2. Create Profile in 'profiles' collection (use UID as doc ID)
+            await setDoc(doc(db, 'profiles', user.uid), {
+                id: user.uid,
                 email: user.email,
                 role: 'worker',
                 full_name: formData.fullName,
                 phone: normalizedPhone,
-                status: 'pending'
+                status: 'pending',
+                created_at: new Date().toISOString(),
             });
-            if (profileError) throw profileError;
 
             // 3. Create role-specific 'worker_profiles' entry
-            const { error: workerError } = await supabase.from('worker_profiles').insert({
-                profile_id: user.id,
+            await setDoc(doc(db, 'worker_profiles', user.uid), {
+                profile_id: user.uid,
                 worker_role: formData.workerRole,
                 years_experience: parseInt(formData.yearsExperience),
                 current_location: formData.currentLocation,
                 availability: formData.availability,
-                aadhaar_url: documentUrl
+                aadhaar_url: documentUrl,
+                created_at: new Date().toISOString(),
             });
-            if (workerError) throw workerError;
 
             // 4. Create document entry for AI Verification Pipeline
             if (documentUrl) {
-                const { data: docData, error: docError } = await supabase.from('documents').insert({
-                    profile_id: user.id,
+                const docRef = await addDoc(collection(db, 'documents'), {
+                    profile_id: user.uid,
                     document_type: 'aadhaar',
                     file_url: documentUrl,
-                    ai_status: 'pending' // Ready for Phase 3!
-                }).select('id').single();
-                if (docError) throw docError;
+                    ai_status: 'pending',
+                    created_at: new Date().toISOString(),
+                });
 
                 // Trigger AI Verification in the background (fire and forget)
-                if (docData?.id) {
-                    fetch('/api/verify-document', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ documentId: docData.id, profileId: user.id })
-                    }).catch(err => console.error("Failed to trigger AI verification:", err));
-                }
+                fetch('/api/verify-document', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ documentId: docRef.id, profileId: user.uid })
+                }).catch(err => console.error("Failed to trigger AI verification:", err));
             }
 
-            // Redirect to dashboard (will show pending state)
             router.push("/dashboard");
         } catch (error) {
             setErrorMessage(error.message);

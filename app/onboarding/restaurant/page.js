@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { auth, db, storage } from "@/lib/firebase/config";
+import { doc, setDoc, addDoc, collection } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +14,6 @@ import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/validation";
 
 export default function RestaurantOnboardingPage() {
     const router = useRouter();
-    const supabase = createClient();
     const [loading, setLoading] = useState(false);
     const [file, setFile] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
@@ -37,57 +38,57 @@ export default function RestaurantOnboardingPage() {
                 throw new Error("Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.");
             }
 
-            const { data: { user } } = await supabase.auth.getUser();
+            const user = auth.currentUser;
             if (!user) throw new Error("Not authenticated");
 
             let documentUrl = "";
 
-            // 1. Upload File
+            // 1. Upload File to Firebase Storage
             if (file) {
                 const fileExt = file.name.split('.').pop();
-                const fileName = `${user.id}_food_license_${Date.now()}.${fileExt}`;
-
-                const { error: uploadError } = await supabase.storage.from('documents').upload(fileName, file);
-                if (uploadError) throw uploadError;
-
-                const { data: publicData } = supabase.storage.from('documents').getPublicUrl(fileName);
-                documentUrl = publicData.publicUrl;
+                const fileName = `documents/${user.uid}_food_license_${Date.now()}.${fileExt}`;
+                const storageRef = ref(storage, fileName);
+                await uploadBytes(storageRef, file);
+                documentUrl = await getDownloadURL(storageRef);
             }
 
             // 2. Create base Profile
-            const { error: profileError } = await supabase.from('profiles').insert({
-                id: user.id, email: user.email, role: 'restaurant',
-                full_name: formData.ownerName, phone: normalizedPhone, status: 'pending'
+            await setDoc(doc(db, 'profiles', user.uid), {
+                id: user.uid,
+                email: user.email,
+                role: 'restaurant',
+                full_name: formData.ownerName,
+                phone: normalizedPhone,
+                status: 'pending',
+                created_at: new Date().toISOString(),
             });
-            if (profileError) throw profileError;
 
             // 3. Create Restaurant Profile
-            const { error: restError } = await supabase.from('restaurant_profiles').insert({
-                profile_id: user.id,
+            await setDoc(doc(db, 'restaurant_profiles', user.uid), {
+                profile_id: user.uid,
                 restaurant_name: formData.restaurantName,
                 cuisine_type: formData.cuisineType,
                 seating_capacity: parseInt(formData.seatingCapacity),
                 address: formData.address,
-                food_license_url: documentUrl
+                food_license_url: documentUrl,
+                created_at: new Date().toISOString(),
             });
-            if (restError) throw restError;
 
             // 4. Create AI Document entry
             if (documentUrl) {
-                const { data: docData, error: docError } = await supabase.from('documents').insert({
-                    profile_id: user.id, document_type: 'food_license', file_url: documentUrl, ai_status: 'pending'
-                }).select('id').single();
+                const docRef = await addDoc(collection(db, 'documents'), {
+                    profile_id: user.uid,
+                    document_type: 'food_license',
+                    file_url: documentUrl,
+                    ai_status: 'pending',
+                    created_at: new Date().toISOString(),
+                });
 
-                if (docError) throw docError;
-
-                // Trigger AI Verification in the background
-                if (docData?.id) {
-                    fetch('/api/verify-document', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ documentId: docData.id, profileId: user.id })
-                    }).catch(err => console.error("Failed to trigger AI verification:", err));
-                }
+                fetch('/api/verify-document', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ documentId: docRef.id, profileId: user.uid })
+                }).catch(err => console.error("Failed to trigger AI verification:", err));
             }
 
             router.push("/dashboard");
@@ -124,12 +125,10 @@ export default function RestaurantOnboardingPage() {
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">Phone Number <span className="text-red-500">*</span></Label>
                                 <Input
-                                    type="tel"
-                                    required
+                                    type="tel" required
                                     value={formData.phone}
                                     onChange={e => setFormData({ ...formData, phone: normalizeIndianPhone(e.target.value) })}
-                                    inputMode="numeric"
-                                    maxLength={10}
+                                    inputMode="numeric" maxLength={10}
                                     pattern="[6-9][0-9]{9}"
                                     title="Enter a valid 10-digit phone number starting with 6, 7, 8, or 9."
                                     className="h-11"
@@ -154,11 +153,10 @@ export default function RestaurantOnboardingPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-zinc-700 font-medium">Full Address & Zone <span className="text-red-500">*</span></Label>
+                            <Label className="text-zinc-700 font-medium">Full Address &amp; Zone <span className="text-red-500">*</span></Label>
                             <textarea
                                 className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-                                rows="3"
-                                required
+                                rows="3" required
                                 value={formData.address}
                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
                             />
@@ -169,7 +167,6 @@ export default function RestaurantOnboardingPage() {
                                 <Label className="text-zinc-700 font-medium text-lg">Upload Food License <span className="text-red-500">*</span></Label>
                                 <p className="text-sm text-zinc-500 mt-1">This will be scanned by our AI for verification.</p>
                             </div>
-
                             <Alert className="bg-blue-50/50 border-blue-200">
                                 <ScanFace className="h-5 w-5 text-blue-600" />
                                 <AlertTitle className="text-blue-900 font-semibold ml-2">AI Verification Guidelines</AlertTitle>
@@ -181,10 +178,8 @@ export default function RestaurantOnboardingPage() {
                                     </ul>
                                 </AlertDescription>
                             </Alert>
-
                             <Input
-                                type="file"
-                                accept="image/*,.pdf"
+                                type="file" accept="image/*,.pdf"
                                 onChange={e => setFile(e.target.files[0])}
                                 required
                                 className="pt-2.5 pb-2 h-auto text-zinc-600 cursor-pointer bg-zinc-50 hover:bg-zinc-100 transition-colors"

@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -11,55 +12,61 @@ export default async function JobApplicantsPage({ params }) {
     const resolvedParams = await params;
     const jobId = resolvedParams.jobId;
 
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session")?.value;
+    if (!session) redirect('/login');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/login');
+    let decodedToken;
+    try {
+        decodedToken = await adminAuth.verifySessionCookie(session, true);
+    } catch {
+        redirect('/login');
+    }
 
-    const { data: restaurant } = await supabase
-        .from('restaurant_profiles')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single();
+    const uid = decodedToken.uid;
 
-    if (!restaurant) redirect('/dashboard');
+    const restaurantSnap = await adminDb.collection('restaurant_profiles').where('profile_id', '==', uid).limit(1).get();
+    if (restaurantSnap.empty) redirect('/dashboard');
+    const restaurant = { id: restaurantSnap.docs[0].id, ...restaurantSnap.docs[0].data() };
 
     // Verify the job belongs to this restaurant and get job details
-    const { data: job } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('id', jobId)
-        .eq('restaurant_id', restaurant.id)
-        .single();
+    const jobSnap = await adminDb.collection('jobs').doc(jobId).get();
+    const job = jobSnap.exists ? { id: jobSnap.id, ...jobSnap.data() } : null;
 
-    if (!job) redirect('/dashboard/restaurant/jobs');
-
-    // Fetch applications for this job joined with worker profile data
-    const { data: applications, error } = await supabase
-        .from('applications')
-        .select(`
-      id,
-      status,
-      created_at,
-      worker_id,
-      worker_profiles (
-        role_type,
-        years_experience,
-        availability,
-        profiles (
-          full_name,
-          phone,
-          email,
-          status
-        )
-      )
-    `)
-        .eq('job_id', jobId)
-        .order('created_at', { ascending: true });
-
-    if (error) {
-        console.error("Error fetching applicants:", error);
+    if (!job || job.restaurant_id !== uid) {
+        redirect('/dashboard/restaurant/jobs');
     }
+
+    // Fetch applications for this job
+    const appsSnap = await adminDb.collection('applications')
+        .where('job_id', '==', jobId)
+        .get();
+
+    const applications = await Promise.all(appsSnap.docs.map(async (doc) => {
+        const appData = doc.data();
+
+        // Fetch worker profile
+        const workerSnap = await adminDb.collection('worker_profiles').doc(appData.worker_id).get();
+        const workerData = workerSnap.exists ? workerSnap.data() : null;
+
+        let profileData = null;
+        if (workerData?.profile_id) {
+            const profileSnap = await adminDb.collection('profiles').doc(workerData.profile_id).get();
+            profileData = profileSnap.exists ? profileSnap.data() : null;
+        }
+
+        return {
+            id: doc.id,
+            ...appData,
+            worker_profiles: {
+                ...workerData,
+                profiles: profileData
+            }
+        };
+    }));
+
+    // In-memory sort
+    applications.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     return (
         <div className="container max-w-4xl mx-auto py-12 px-4">
@@ -96,14 +103,14 @@ export default async function JobApplicantsPage({ params }) {
                                             </div>
                                             <div className="space-y-3">
                                                 <div>
-                                                    <h3 className="text-xl font-bold text-zinc-900 m-0 flex items-center flex-wrap gap-2">
+                                                    <div className="text-xl font-bold text-zinc-900 m-0 flex items-center flex-wrap gap-2">
                                                         {profileData?.full_name || 'Anonymous Worker'}
                                                         {profileData?.status === 'approved' && (
                                                             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 font-medium">
                                                                 <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Verified Background
                                                             </Badge>
                                                         )}
-                                                    </h3>
+                                                    </div>
                                                 </div>
                                                 <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-zinc-600 font-medium">
                                                     <span className="capitalize">{workerData?.role_type.replace('_', ' ')}</span>

@@ -1,15 +1,19 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { adminAuth } from '@/lib/firebase/admin'
+import { cookies } from 'next/headers'
 import Header from '@/components/Header'
 
 export default async function DashboardLayout({ children }) {
-    const supabase = await createClient()
+    const cookieStore = await cookies()
+    const session = cookieStore.get('session')?.value
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    if (!session) {
+        redirect('/login')
+    }
 
-    if (!user) {
+    try {
+        await adminAuth.verifySessionCookie(session, true)
+    } catch {
         redirect('/login')
     }
 

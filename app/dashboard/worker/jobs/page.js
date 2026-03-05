@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import ApplyButton from "@/components/job/ApplyButton";
@@ -8,55 +9,46 @@ import EmptyState from "@/components/ui/empty-state";
 import { ArrowLeft, Clock, Building2, Calendar, ChefHat, Star, Banknote } from "lucide-react";
 
 export default async function WorkerJobsPage() {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session")?.value;
+    if (!session) redirect('/login');
 
-    // 1. Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/login');
-
-    // 2. Get worker profile
-    const { data: worker } = await supabase
-        .from('worker_profiles')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single();
-
-    if (!worker) redirect('/dashboard');
-
-    // 3. Fetch all active Jobs with the restaurant details
-    const { data: jobs, error } = await supabase
-        .from('jobs')
-        .select(`
-      id,
-      title,
-      role_type,
-      job_type,
-      shift,
-      experience_required,
-      salary_min,
-      salary_max,
-      description,
-      created_at,
-      restaurant_id,
-      restaurant_profiles (
-        restaurant_name,
-        address
-      )
-    `)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error("Error fetching jobs:", error);
+    let decodedToken;
+    try {
+        decodedToken = await adminAuth.verifySessionCookie(session, true);
+    } catch {
+        redirect('/login');
     }
 
-    // 4. Fetch the jobs this worker has ALREADY applied to
-    const { data: applications } = await supabase
-        .from('applications')
-        .select('job_id')
-        .eq('worker_id', worker.id);
+    const uid = decodedToken.uid;
 
-    const appliedJobIds = new Set(applications?.map(app => app.job_id) || []);
+    // 2. Get worker profile
+    const workerSnap = await adminDb.collection('worker_profiles').where('profile_id', '==', uid).limit(1).get();
+    if (workerSnap.empty) redirect('/dashboard');
+    const worker = { id: workerSnap.docs[0].id, ...workerSnap.docs[0].data() };
+
+    // 3. Fetch all active Jobs
+    const jobsSnap = await adminDb.collection('jobs').where('is_active', '==', true).get();
+
+    // 4. Fetch the jobs this worker has ALREADY applied to
+    const appsSnap = await adminDb.collection('applications').where('worker_id', '==', worker.id).get();
+    const appliedJobIds = new Set(appsSnap.docs.map(doc => doc.data().job_id));
+
+    const jobs = await Promise.all(jobsSnap.docs.map(async (doc) => {
+        const data = doc.data();
+        // Fetch restaurant details for each job
+        const restaurantSnap = await adminDb.collection('restaurant_profiles').where('profile_id', '==', data.restaurant_id).limit(1).get();
+        const restaurant = !restaurantSnap.empty ? restaurantSnap.docs[0].data() : null;
+
+        return {
+            id: doc.id,
+            ...data,
+            restaurant_profiles: restaurant
+        };
+    }));
+
+    // In-memory sort by created_at desc
+    jobs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     return (
         <div className="container max-w-6xl mx-auto py-12 px-4">

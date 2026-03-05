@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,68 +8,83 @@ import { Badge } from "@/components/ui/badge"
 import { Clock, CheckCircle2, AlertTriangle, XCircle, Briefcase, Users, Store, Package, Activity, FileText } from 'lucide-react'
 
 export default async function DashboardPage() {
-    const supabase = await createClient()
+    const cookieStore = await cookies()
+    const session = cookieStore.get('session')?.value
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    if (!session) redirect('/login')
 
-    if (!user) {
+    let decodedToken;
+    try {
+        decodedToken = await adminAuth.verifySessionCookie(session, true)
+    } catch {
         redirect('/login')
     }
 
+    const uid = decodedToken.uid
+
     // Check if profile exists
-    const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle()
+    const profileSnap = await adminDb.collection('profiles').doc(uid).get()
+    const profile = profileSnap.data()
 
-    // Fetch the latest document status if available
-    const { data: documents } = await supabase
-        .from('documents')
-        .select('ai_status, document_type')
-        .eq('profile_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-
-    const latestDoc = documents?.[0] || null;
-
-    // Fetch Analytics Data based on Role
-    let analytics = { activeJobs: 0, pendingApps: 0, totalApps: 0, hiredJobs: 0 };
-
-    if (profile?.role === 'restaurant') {
-        const { data: restaurant } = await supabase.from('restaurant_profiles').select('id').eq('profile_id', user.id).maybeSingle();
-        if (restaurant) {
-            const { count: activeJobsCount } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('restaurant_id', restaurant.id).eq('is_active', true);
-            const { count: pendingAppsCount } = await supabase.from('applications').select('*, jobs!inner(restaurant_id)', { count: 'exact', head: true }).eq('jobs.restaurant_id', restaurant.id).eq('status', 'pending');
-            analytics.activeJobs = activeJobsCount || 0;
-            analytics.pendingApps = pendingAppsCount || 0;
-        }
-    } else if (profile?.role === 'worker') {
-        const { data: worker } = await supabase.from('worker_profiles').select('id').eq('profile_id', user.id).maybeSingle();
-        if (worker) {
-            const { count: totalAppsCount } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('worker_id', worker.id);
-            const { count: hiredCount } = await supabase.from('applications').select('*', { count: 'exact', head: true }).eq('worker_id', worker.id).eq('status', 'hired');
-            analytics.totalApps = totalAppsCount || 0;
-            analytics.hiredJobs = hiredCount || 0;
-        }
-    } else if (profile?.role === 'vendor') {
-        const { data: vendor } = await supabase.from('vendor_profiles').select('id').eq('profile_id', user.id).maybeSingle();
-        if (vendor) {
-            const { count: pendingLeadsCount } = await supabase.from('quote_requests').select('*', { count: 'exact', head: true }).eq('vendor_id', vendor.id).eq('status', 'pending');
-            analytics.pendingApps = pendingLeadsCount || 0; // reusing pendingApps for simplicity in layout
-        }
-    }
-
-    // If no profile exists, or role is unknown, maybe they didn't finish onboarding
-    if (error || !profile) {
-        // If not in profiles, read role from user_metadata and go to onboarding
-        const role = user.user_metadata?.role || 'worker' // fallback to worker
+    // If no profile, send to onboarding
+    if (!profile) {
+        const role = decodedToken.role || 'worker'
         redirect(`/onboarding/${role}`)
     }
 
-    // They have a profile, but is it pending?
+    // Admins should not use the normal dashboard — send them to their own panel
+    if (profile.role === 'admin') {
+        redirect('/admin')
+    }
+
+    // Fetch the latest document status
+    const docsSnap = await adminDb.collection('documents')
+        .where('profile_id', '==', uid)
+        .get()
+
+    // Sort in memory to avoid index requirement
+    const latestDoc = docsSnap.empty
+        ? null
+        : docsSnap.docs
+            .map(d => d.data())
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+
+    // Fetch Analytics based on role
+    let analytics = { activeJobs: 0, pendingApps: 0, totalApps: 0, hiredJobs: 0 }
+
+    if (profile.role === 'restaurant') {
+        const activeJobsSnap = await adminDb.collection('jobs')
+            .where('restaurant_id', '==', uid)
+            .where('is_active', '==', true)
+            .get()
+        analytics.activeJobs = activeJobsSnap.size
+
+        const pendingAppsSnap = await adminDb.collection('applications')
+            .where('restaurant_id', '==', uid)
+            .where('status', '==', 'pending')
+            .get()
+        analytics.pendingApps = pendingAppsSnap.size
+
+    } else if (profile.role === 'worker') {
+        const allAppsSnap = await adminDb.collection('applications')
+            .where('worker_id', '==', uid)
+            .get()
+        analytics.totalApps = allAppsSnap.size
+
+        const hiredSnap = await adminDb.collection('applications')
+            .where('worker_id', '==', uid)
+            .where('status', '==', 'hired')
+            .get()
+        analytics.hiredJobs = hiredSnap.size
+
+    } else if (profile.role === 'vendor') {
+        const leadsSnap = await adminDb.collection('quote_requests')
+            .where('vendor_id', '==', uid)
+            .where('status', '==', 'pending')
+            .get()
+        analytics.pendingApps = leadsSnap.size
+    }
+
     if (profile.status === 'pending') {
         return (
             <div className="min-h-[80vh] flex items-center justify-center py-12 px-4">
@@ -101,7 +117,7 @@ export default async function DashboardPage() {
                                             <div className="w-10 h-10 rounded-full bg-blue-100/80 flex items-center justify-center shrink-0">
                                                 <FileText className="w-5 h-5 text-blue-600" />
                                             </div>
-                                            <span className="font-medium text-zinc-800 capitalize truncate line-clamp-1">{latestDoc.document_type.replace('_', ' ')}</span>
+                                            <span className="font-medium text-zinc-800 capitalize truncate line-clamp-1">{latestDoc.document_type?.replace('_', ' ')}</span>
                                         </div>
                                         {latestDoc.ai_status === 'pending' || latestDoc.ai_status === 'processing' ? (
                                             <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 shadow-sm px-4 py-1.5 text-sm shrink-0">Processing by AI...</Badge>
@@ -175,9 +191,9 @@ export default async function DashboardPage() {
             <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-zinc-900 mb-1">Welcome back, {profile.full_name || 'User'}!</h1>
-                    <p className="text-zinc-500 flex items-center gap-2">
+                    <div className="text-zinc-500 flex items-center gap-2">
                         You are signed in as a verified <Badge variant="secondary" className="capitalize text-xs rounded-md">{profile.role}</Badge>
-                    </p>
+                    </div>
                 </div>
                 <form action="/auth/signout" method="post">
                     <Button type="submit" variant="outline" className="h-10 text-zinc-600">Sign Out</Button>
@@ -190,9 +206,7 @@ export default async function DashboardPage() {
                         <Card className="border-primary/20 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
                             <div className="absolute top-0 left-0 right-0 h-1 bg-primary"></div>
                             <CardHeader>
-                                <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2">
-                                    <Briefcase className="w-5 h-5 text-primary" />
-                                </div>
+                                <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2"><Briefcase className="w-5 h-5 text-primary" /></div>
                                 <CardTitle>Post a New Job</CardTitle>
                                 <CardDescription>Hire verified chefs, waiters, and kitchen helpers in your zone.</CardDescription>
                             </CardHeader>
@@ -202,12 +216,9 @@ export default async function DashboardPage() {
                                 </Link>
                             </CardContent>
                         </Card>
-
                         <Card className="shadow-sm border-zinc-200 transition-all hover:shadow-md">
                             <CardHeader>
-                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2">
-                                    <Users className="w-5 h-5 text-zinc-600" />
-                                </div>
+                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><Users className="w-5 h-5 text-zinc-600" /></div>
                                 <CardTitle>Manage Jobs</CardTitle>
                                 <CardDescription>Review applications and make hiring decisions.</CardDescription>
                             </CardHeader>
@@ -217,12 +228,9 @@ export default async function DashboardPage() {
                                 </Link>
                             </CardContent>
                         </Card>
-
                         <Card className="shadow-sm border-zinc-200 transition-all hover:shadow-md">
                             <CardHeader>
-                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2">
-                                    <Store className="w-5 h-5 text-zinc-600" />
-                                </div>
+                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><Store className="w-5 h-5 text-zinc-600" /></div>
                                 <CardTitle>B2B Suppliers</CardTitle>
                                 <CardDescription>Find packaging, equipment, and ingredients.</CardDescription>
                             </CardHeader>
@@ -232,12 +240,9 @@ export default async function DashboardPage() {
                                 </Link>
                             </CardContent>
                         </Card>
-
                         <Card className="shadow-sm border-zinc-200 transition-all hover:shadow-md md:col-span-2 lg:col-span-3">
                             <CardHeader>
-                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2">
-                                    <Users className="w-5 h-5 text-zinc-600" />
-                                </div>
+                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><Users className="w-5 h-5 text-zinc-600" /></div>
                                 <CardTitle>Worker Directory</CardTitle>
                                 <CardDescription>Proactively browse active verified workers in your zone.</CardDescription>
                             </CardHeader>
@@ -255,9 +260,7 @@ export default async function DashboardPage() {
                         <Card className="border-primary/20 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
                             <div className="absolute top-0 left-0 right-0 h-1 bg-primary"></div>
                             <CardHeader>
-                                <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2">
-                                    <Briefcase className="w-5 h-5 text-primary" />
-                                </div>
+                                <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2"><Briefcase className="w-5 h-5 text-primary" /></div>
                                 <CardTitle>Find Jobs</CardTitle>
                                 <CardDescription>Browse active job postings from restaurants in your zone.</CardDescription>
                             </CardHeader>
@@ -267,12 +270,9 @@ export default async function DashboardPage() {
                                 </Link>
                             </CardContent>
                         </Card>
-
                         <Card className="shadow-sm border-zinc-200 transition-all hover:shadow-md">
                             <CardHeader>
-                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2">
-                                    <Activity className="w-5 h-5 text-zinc-600" />
-                                </div>
+                                <div className="p-2.5 bg-zinc-100 w-fit rounded-lg mb-2"><Activity className="w-5 h-5 text-zinc-600" /></div>
                                 <CardTitle>My Applications</CardTitle>
                                 <CardDescription>Track the status of jobs you have applied for.</CardDescription>
                             </CardHeader>
@@ -289,9 +289,7 @@ export default async function DashboardPage() {
                     <Card className="border-primary/20 shadow-sm relative overflow-hidden transition-all hover:shadow-md lg:col-span-2">
                         <div className="absolute top-0 left-0 right-0 h-1 bg-primary"></div>
                         <CardHeader>
-                            <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2">
-                                <Package className="w-5 h-5 text-primary" />
-                            </div>
+                            <div className="p-2.5 bg-primary/10 w-fit rounded-lg mb-2"><Package className="w-5 h-5 text-primary" /></div>
                             <CardTitle>Quote Requests</CardTitle>
                             <CardDescription>Manage incoming B2B leads from local restaurants.</CardDescription>
                         </CardHeader>
@@ -304,7 +302,7 @@ export default async function DashboardPage() {
                 )}
             </div>
 
-            <h2 className="text-xl font-bold text-zinc-900 mb-6">Overview & Stats</h2>
+            <h2 className="text-xl font-bold text-zinc-900 mb-6">Overview &amp; Stats</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
                 <Card className="shadow-sm border-zinc-200">

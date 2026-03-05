@@ -1,25 +1,27 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { cookies } from 'next/headers'
 import Header from '@/components/Header'
+import AdminSidebar from '@/components/AdminSidebar'
 
 export default async function AdminLayout({ children }) {
-    const supabase = await createClient()
+    const cookieStore = await cookies()
+    const session = cookieStore.get('session')?.value
 
-    // Ensure user is signed in
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    if (!session) {
+        redirect('/admin-login')
+    }
 
-    if (!user) {
-        redirect('/login')
+    let decodedToken;
+    try {
+        decodedToken = await adminAuth.verifySessionCookie(session, true)
+    } catch {
+        redirect('/admin-login')
     }
 
     // Ensure user is an admin
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle()
+    const profileSnap = await adminDb.collection('profiles').doc(decodedToken.uid).get()
+    const profile = profileSnap.data()
 
     if (profile?.role !== 'admin') {
         redirect('/dashboard')
@@ -28,24 +30,12 @@ export default async function AdminLayout({ children }) {
     return (
         <div style={{ minHeight: '100vh', background: 'var(--bg-subtle)' }}>
             <Header />
-            <div style={{ padding: '0 24px' }}>
-                <div style={{
-                    background: '#0a0a0a',
-                    color: 'white',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    marginTop: '80px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    <h2 style={{ fontSize: '1.2rem', margin: 0 }}>🛡️ Admin Control Room</h2>
-                    <span style={{ fontSize: '0.9rem', color: '#888' }}>Margros Platform Operations</span>
-                </div>
+            <div className="flex flex-col md:flex-row gap-6 p-4 pt-[100px] md:p-6 md:pt-[100px] max-w-[1400px] mx-auto">
+                <AdminSidebar />
+                <main className="flex-1 min-w-0">
+                    {children}
+                </main>
             </div>
-            <main style={{ padding: '24px' }}>
-                {children}
-            </main>
         </div>
     )
 }

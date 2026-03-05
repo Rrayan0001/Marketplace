@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { db } from "@/lib/firebase/config";
+import { addDoc, collection } from "firebase/firestore";
 import { VALIDATION_LIMITS, getDescriptionLength, isValidDescriptionLength } from "@/lib/validation";
 
 export default function RequestQuoteModal({ vendorId, restaurantId, vendorName }) {
@@ -8,7 +9,6 @@ export default function RequestQuoteModal({ vendorId, restaurantId, vendorName }
     const [loading, setLoading] = useState(false);
     const [details, setDetails] = useState("");
     const [success, setSuccess] = useState(false);
-    const supabase = createClient();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -21,14 +21,14 @@ export default function RequestQuoteModal({ vendorId, restaurantId, vendorName }
         setLoading(true);
 
         try {
-            const { error } = await supabase.from('quote_requests').insert({
+            await addDoc(collection(db, 'quote_requests'), {
                 restaurant_id: restaurantId,
                 vendor_id: vendorId,
                 details: trimmedDetails,
-                status: 'pending'
+                status: 'pending',
+                created_at: new Date().toISOString(),
             });
 
-            if (error) throw error;
             setSuccess(true);
             setTimeout(() => {
                 setIsOpen(false);

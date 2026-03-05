@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { adminDb } from "@/lib/firebase/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,65 +56,55 @@ function renderAiStatus(doc) {
 export default async function ReviewProfilePage({ params }) {
   const resolvedParams = await params;
   const profileId = resolvedParams.profileId;
-  const supabase = await createClient();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", profileId)
-    .single();
+  const profileSnap = await adminDb.collection("profiles").doc(profileId).get();
+  const profile = profileSnap.exists ? { id: profileSnap.id, ...profileSnap.data() } : null;
 
   if (!profile || profile.status !== "pending") {
     redirect("/admin");
   }
 
   let roleData = null;
-  if (profile.role === "restaurant") {
-    const { data } = await supabase
-      .from("restaurant_profiles")
-      .select("*")
-      .eq("profile_id", profileId)
-      .single();
-    roleData = data;
-  } else if (profile.role === "worker") {
-    const { data } = await supabase
-      .from("worker_profiles")
-      .select("*")
-      .eq("profile_id", profileId)
-      .single();
-    roleData = data;
-  } else if (profile.role === "vendor") {
-    const { data } = await supabase
-      .from("vendor_profiles")
-      .select("*")
-      .eq("profile_id", profileId)
-      .single();
-    roleData = data;
+  const roleCollection =
+    profile.role === "restaurant" ? "restaurant_profiles" :
+      profile.role === "worker" ? "worker_profiles" :
+        profile.role === "vendor" ? "vendor_profiles" : null;
+
+  if (roleCollection) {
+    const roleSnap = await adminDb.collection(roleCollection)
+      .where("profile_id", "==", profileId)
+      .limit(1)
+      .get();
+
+    if (!roleSnap.empty) {
+      roleData = roleSnap.docs[0].data();
+    }
   }
 
-  const { data: documents } = await supabase
-    .from("documents")
-    .select("*")
-    .eq("profile_id", profileId)
-    .order("created_at", { ascending: false })
-    .limit(1);
+  const docsSnap = await adminDb.collection("documents")
+    .where("profile_id", "==", profileId)
+    .get();
+
+  const documents = docsSnap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   const doc = documents?.[0] || null;
 
   const roleEntries = roleData
     ? Object.entries(roleData).filter(
-        ([key]) =>
-          ![
-            "id",
-            "profile_id",
-            "created_at",
-            "updated_at",
-            "food_license_url",
-            "aadhaar_url",
-            "gst_certificate_url",
-            "ai_verification_data",
-          ].includes(key)
-      )
+      ([key]) =>
+        ![
+          "id",
+          "profile_id",
+          "created_at",
+          "updated_at",
+          "food_license_url",
+          "aadhaar_url",
+          "gst_certificate_url",
+          "ai_verification_data",
+        ].includes(key)
+    )
     : [];
 
   return (

@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,39 +9,43 @@ import { ArrowLeft, Store, CheckCircle2, PackageSearch } from "lucide-react";
 import RequestQuoteModal from "@/components/vendor/RequestQuoteModal";
 
 export default async function RestaurantVendorsDirectory() {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session")?.value;
+    if (!session) redirect('/login');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/login');
+    let decodedToken;
+    try {
+        decodedToken = await adminAuth.verifySessionCookie(session, true);
+    } catch {
+        redirect('/login');
+    }
 
-    const { data: restaurant } = await supabase
-        .from('restaurant_profiles')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single();
+    const uid = decodedToken.uid;
 
-    if (!restaurant) redirect('/dashboard');
+    const restaurantSnap = await adminDb.collection('restaurant_profiles').where('profile_id', '==', uid).limit(1).get();
+    if (restaurantSnap.empty) redirect('/dashboard');
+    const restaurant = { id: restaurantSnap.docs[0].id, ...restaurantSnap.docs[0].data() };
 
     // Fetch approved vendors
-    const { data: vendors, error } = await supabase
-        .from('vendor_profiles')
-        .select(`
-      id,
-      business_name,
-      service_category,
-      description,
-      profiles!inner (
-        full_name,
-        status,
-        created_at
-      )
-    `)
-        .eq('profiles.status', 'approved')
-        .order('profiles(created_at)', { ascending: false });
+    const vendorProfilesSnap = await adminDb.collection('vendor_profiles').get();
 
-    if (error) {
-        console.error("Error fetching vendors:", error);
-    }
+    const vendorsPromises = vendorProfilesSnap.docs.map(async (doc) => {
+        const vendorData = doc.data();
+        const profileSnap = await adminDb.collection('profiles').doc(vendorData.profile_id).get();
+        const profileData = profileSnap.exists ? profileSnap.data() : null;
+
+        if (profileData?.status !== 'approved') return null;
+
+        return {
+            id: doc.id,
+            ...vendorData,
+            profiles: profileData
+        };
+    });
+
+    const vendors = (await Promise.all(vendorsPromises))
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.profiles.created_at) - new Date(a.profiles.created_at));
 
     return (
         <div className="container max-w-6xl mx-auto py-12 px-4">

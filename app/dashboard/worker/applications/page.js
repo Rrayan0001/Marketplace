@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,41 +9,56 @@ import EmptyState from "@/components/ui/empty-state";
 import { ArrowLeft, FileText, Building2, Calendar, Clock, CheckCircle2, XCircle, Search } from "lucide-react";
 
 export default async function WorkerApplicationsPage() {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session")?.value;
+    if (!session) redirect('/login');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/login');
-
-    const { data: worker } = await supabase
-        .from('worker_profiles')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single();
-
-    if (!worker) redirect('/dashboard');
-
-    // Fetch applications with joined job and restaurant data
-    const { data: applications, error } = await supabase
-        .from('applications')
-        .select(`
-      id,
-      status,
-      created_at,
-      jobs (
-        title,
-        salary_min,
-        salary_max,
-        restaurant_profiles (
-          restaurant_name
-        )
-      )
-    `)
-        .eq('worker_id', worker.id)
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error("Error fetching applications:", error);
+    let decodedToken;
+    try {
+        decodedToken = await adminAuth.verifySessionCookie(session, true);
+    } catch {
+        redirect('/login');
     }
+
+    const uid = decodedToken.uid;
+
+    const workerSnap = await adminDb.collection('worker_profiles').where('profile_id', '==', uid).limit(1).get();
+    if (workerSnap.empty) redirect('/dashboard');
+    const worker = { id: workerSnap.docs[0].id, ...workerSnap.docs[0].data() };
+
+    // Fetch applications
+    const appsSnap = await adminDb.collection('applications')
+        .where('worker_id', '==', worker.id)
+        .get();
+
+    const applications = await Promise.all(appsSnap.docs.map(async (doc) => {
+        const appData = doc.data();
+
+        // Fetch job details
+        const jobSnap = await adminDb.collection('jobs').doc(appData.job_id).get();
+        const jobData = jobSnap.exists ? jobSnap.data() : null;
+
+        let restaurantData = null;
+        if (jobData?.restaurant_id) {
+            const resSnap = await adminDb.collection('restaurant_profiles')
+                .where('profile_id', '==', jobData.restaurant_id)
+                .limit(1)
+                .get();
+            restaurantData = !resSnap.empty ? resSnap.docs[0].data() : null;
+        }
+
+        return {
+            id: doc.id,
+            ...appData,
+            jobs: {
+                ...jobData,
+                restaurant_profiles: restaurantData
+            }
+        };
+    }));
+
+    // In-memory sort
+    applications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     return (
         <div className="container max-w-4xl mx-auto py-12 px-4">

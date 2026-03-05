@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,40 +9,46 @@ import EmptyState from "@/components/ui/empty-state";
 import { ArrowLeft, Plus, FileText, Calendar, Clock, Users } from "lucide-react";
 
 export default async function RestaurantJobsPage() {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session")?.value;
+    if (!session) redirect('/login');
 
-    // 1. Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/login');
+    let decodedToken;
+    try {
+        decodedToken = await adminAuth.verifySessionCookie(session, true);
+    } catch {
+        redirect('/login');
+    }
+
+    const uid = decodedToken.uid;
 
     // 2. Get restaurant profile
-    const { data: restaurant } = await supabase
-        .from('restaurant_profiles')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single();
+    const restaurantSnap = await adminDb.collection('restaurant_profiles').where('profile_id', '==', uid).limit(1).get();
+    if (restaurantSnap.empty) redirect('/dashboard');
+    const restaurant = { id: restaurantSnap.docs[0].id, ...restaurantSnap.docs[0].data() };
 
-    if (!restaurant) redirect('/dashboard');
+    // 3. Fetch jobs posted by this restaurant
+    const jobsSnap = await adminDb.collection('jobs')
+        .where('restaurant_id', '==', uid)
+        .get();
 
-    // 3. Fetch jobs posted by this restaurant, including applications count
-    const { data: jobs, error } = await supabase
-        .from('jobs')
-        .select(`
-      id,
-      title,
-      role_type,
-      job_type,
-      shift,
-      is_active,
-      created_at,
-      applications ( count )
-    `)
-        .eq('restaurant_id', restaurant.id)
-        .order('created_at', { ascending: false });
+    const jobs = await Promise.all(jobsSnap.docs.map(async (doc) => {
+        const data = doc.data();
 
-    if (error) {
-        console.error("Error fetching jobs:", error);
-    }
+        // Fetch applications count for this job
+        const appsSnap = await adminDb.collection('applications')
+            .where('job_id', '==', doc.id)
+            .get();
+
+        return {
+            id: doc.id,
+            ...data,
+            applications: [{ count: appsSnap.size }]
+        };
+    }));
+
+    // In-memory sort
+    jobs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     return (
         <div className="container max-w-5xl mx-auto py-12 px-4">
@@ -129,21 +136,21 @@ export default async function RestaurantJobsPage() {
 }
 
 function BriefcaseIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-      <rect width="20" height="14" x="2" y="6" rx="2" />
-    </svg>
-  )
+    return (
+        <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+            <rect width="20" height="14" x="2" y="6" rx="2" />
+        </svg>
+    )
 }

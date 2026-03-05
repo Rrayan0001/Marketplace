@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,46 +9,56 @@ import EmptyState from "@/components/ui/empty-state";
 import { ArrowLeft, Inbox, MapPin, Calendar, CheckCircle2, XCircle, Mail, Phone, Building2 } from "lucide-react";
 
 export default async function VendorLeadsPage() {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session")?.value;
+    if (!session) redirect('/login');
 
-    // 1. Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect('/login');
-
-    // 2. Get vendor profile
-    const { data: vendor } = await supabase
-        .from('vendor_profiles')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single();
-
-    if (!vendor) redirect('/dashboard');
-
-    // 3. Fetch incoming quote requests
-    const { data: leads, error } = await supabase
-        .from('quote_requests')
-        .select(`
-      id,
-      details,
-      status,
-      created_at,
-      restaurant_id,
-      restaurant_profiles (
-        restaurant_name,
-        address,
-        profiles (
-          full_name,
-          email,
-          phone
-        )
-      )
-    `)
-        .eq('vendor_id', vendor.id)
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error("Error fetching leads:", error);
+    let decodedToken;
+    try {
+        decodedToken = await adminAuth.verifySessionCookie(session, true);
+    } catch {
+        redirect('/login');
     }
+
+    const uid = decodedToken.uid;
+
+    const vendorSnap = await adminDb.collection('vendor_profiles').where('profile_id', '==', uid).limit(1).get();
+    if (vendorSnap.empty) redirect('/dashboard');
+    const vendor = { id: vendorSnap.docs[0].id, ...vendorSnap.docs[0].data() };
+
+    // Fetch incoming quote requests
+    const leadsSnap = await adminDb.collection('quote_requests')
+        .where('vendor_id', '==', vendor.id)
+        .get();
+
+    const leads = await Promise.all(leadsSnap.docs.map(async (doc) => {
+        const leadData = doc.data();
+
+        // Fetch restaurant details
+        const resSnap = await adminDb.collection('restaurant_profiles')
+            .where('profile_id', '==', leadData.restaurant_id)
+            .limit(1)
+            .get();
+        const resData = !resSnap.empty ? resSnap.docs[0].data() : null;
+
+        let profileData = null;
+        if (leadData.restaurant_id) {
+            const profileSnap = await adminDb.collection('profiles').doc(leadData.restaurant_id).get();
+            profileData = profileSnap.exists ? profileSnap.data() : null;
+        }
+
+        return {
+            id: doc.id,
+            ...leadData,
+            restaurant_profiles: {
+                ...resData,
+                profiles: profileData
+            }
+        };
+    }));
+
+    // In-memory sort
+    leads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     return (
         <div className="container max-w-4xl mx-auto py-12 px-4">

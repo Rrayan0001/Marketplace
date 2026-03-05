@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { db, auth } from "@/lib/firebase/config";
+import { collection, addDoc, getDocs, query, where, limit } from "firebase/firestore";
 import Link from "next/link";
 import { ArrowLeft, Briefcase, TriangleAlert } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,6 @@ import { VALIDATION_LIMITS, getDescriptionLength, isValidDescriptionLength } fro
 
 export default function PostJobPage() {
     const router = useRouter();
-    const supabase = createClient();
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -40,20 +40,18 @@ export default function PostJobPage() {
                 );
             }
 
-            const { data: { user } } = await supabase.auth.getUser();
+            const user = auth.currentUser;
             if (!user) throw new Error("Not authenticated");
 
             // Get restaurant profile ID
-            const { data: restaurant } = await supabase
-                .from('restaurant_profiles')
-                .select('id, profile_id')
-                .eq('profile_id', user.id)
-                .single();
+            const q = query(collection(db, 'restaurant_profiles'), where('profile_id', '==', user.uid), limit(1));
+            const querySnapshot = await getDocs(q);
 
-            if (!restaurant) throw new Error("Could not find your restaurant profile.");
+            if (querySnapshot.empty) throw new Error("Could not find your restaurant profile.");
+            const restaurantId = querySnapshot.docs[0].id;
 
-            const { error } = await supabase.from('jobs').insert({
-                restaurant_id: restaurant.id,
+            await addDoc(collection(db, 'jobs'), {
+                restaurant_id: user.uid, // Using uid for consistency with other parts
                 title: formData.title,
                 role_type: formData.roleType,
                 job_type: formData.jobType,
@@ -62,10 +60,9 @@ export default function PostJobPage() {
                 salary_min: formData.salaryMin ? parseInt(formData.salaryMin) : null,
                 salary_max: formData.salaryMax ? parseInt(formData.salaryMax) : null,
                 description: formData.description.trim(),
-                is_active: true
+                is_active: true,
+                created_at: new Date().toISOString()
             });
-
-            if (error) throw error;
 
             router.push("/dashboard/restaurant/jobs");
             router.refresh();
@@ -107,15 +104,15 @@ export default function PostJobPage() {
                                 <AlertDescription>{errorMessage}</AlertDescription>
                             </Alert>
                         ) : null}
-                        
+
                         <div className="space-y-3">
                             <Label className="text-zinc-700 font-medium text-base">Job Title <span className="text-red-500">*</span></Label>
-                            <Input 
-                                type="text" 
-                                placeholder="e.g. Senior Sous Chef for Italian Kitchen" 
-                                required 
-                                value={formData.title} 
-                                onChange={e => setFormData({ ...formData, title: e.target.value })} 
+                            <Input
+                                type="text"
+                                placeholder="e.g. Senior Sous Chef for Italian Kitchen"
+                                required
+                                value={formData.title}
+                                onChange={e => setFormData({ ...formData, title: e.target.value })}
                                 className="h-12 text-base"
                             />
                         </div>
@@ -123,9 +120,9 @@ export default function PostJobPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-3">
                                 <Label className="text-zinc-700 font-medium text-base">Role Category <span className="text-red-500">*</span></Label>
-                                <select 
+                                <select
                                     className="flex h-12 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-                                    value={formData.roleType} 
+                                    value={formData.roleType}
                                     onChange={e => setFormData({ ...formData, roleType: e.target.value })}
                                 >
                                     <option value="chef">Chef / Cook</option>
@@ -137,9 +134,9 @@ export default function PostJobPage() {
                             </div>
                             <div className="space-y-3">
                                 <Label className="text-zinc-700 font-medium text-base">Job Type <span className="text-red-500">*</span></Label>
-                                <select 
+                                <select
                                     className="flex h-12 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-                                    value={formData.jobType} 
+                                    value={formData.jobType}
                                     onChange={e => setFormData({ ...formData, jobType: e.target.value })}
                                 >
                                     <option value="full_time">Full Time</option>
@@ -152,9 +149,9 @@ export default function PostJobPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-3">
                                 <Label className="text-zinc-700 font-medium text-base">Shift Timing <span className="text-red-500">*</span></Label>
-                                <select 
+                                <select
                                     className="flex h-12 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-                                    value={formData.shift} 
+                                    value={formData.shift}
                                     onChange={e => setFormData({ ...formData, shift: e.target.value })}
                                 >
                                     <option value="morning">Morning Shift</option>
@@ -166,12 +163,12 @@ export default function PostJobPage() {
                             </div>
                             <div className="space-y-3">
                                 <Label className="text-zinc-700 font-medium text-base">Minimum Experience (Years) <span className="text-red-500">*</span></Label>
-                                <Input 
-                                    type="number" 
-                                    min="0" 
-                                    required 
-                                    value={formData.experienceRequired} 
-                                    onChange={e => setFormData({ ...formData, experienceRequired: e.target.value })} 
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    required
+                                    value={formData.experienceRequired}
+                                    onChange={e => setFormData({ ...formData, experienceRequired: e.target.value })}
                                     className="h-12 text-base"
                                 />
                             </div>
@@ -180,23 +177,23 @@ export default function PostJobPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-zinc-50 p-6 rounded-xl border border-zinc-100">
                             <div className="space-y-3">
                                 <Label className="text-zinc-700 font-medium text-base">Min Salary (Monthly, ₹)</Label>
-                                <Input 
-                                    type="number" 
-                                    min="0" 
-                                    placeholder="e.g. 15000" 
-                                    value={formData.salaryMin} 
-                                    onChange={e => setFormData({ ...formData, salaryMin: e.target.value })} 
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="e.g. 15000"
+                                    value={formData.salaryMin}
+                                    onChange={e => setFormData({ ...formData, salaryMin: e.target.value })}
                                     className="h-12 text-base bg-white"
                                 />
                             </div>
                             <div className="space-y-3">
                                 <Label className="text-zinc-700 font-medium text-base">Max Salary (Monthly, ₹)</Label>
-                                <Input 
-                                    type="number" 
-                                    min="0" 
-                                    placeholder="e.g. 25000" 
-                                    value={formData.salaryMax} 
-                                    onChange={e => setFormData({ ...formData, salaryMax: e.target.value })} 
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="e.g. 25000"
+                                    value={formData.salaryMax}
+                                    onChange={e => setFormData({ ...formData, salaryMax: e.target.value })}
                                     className="h-12 text-base bg-white"
                                 />
                             </div>
@@ -204,12 +201,12 @@ export default function PostJobPage() {
 
                         <div className="space-y-3">
                             <Label className="text-zinc-700 font-medium text-base">Full Description & Requirements <span className="text-red-500">*</span></Label>
-                            <textarea 
-                                className="flex min-h-[150px] w-full rounded-md border border-zinc-200 bg-transparent px-3 py-3 text-base shadow-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" 
-                                rows="6" 
-                                placeholder="Describe the daily responsibilities, required skills, and any other benefits..." 
-                                required 
-                                value={formData.description} 
+                            <textarea
+                                className="flex min-h-[150px] w-full rounded-md border border-zinc-200 bg-transparent px-3 py-3 text-base shadow-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
+                                rows="6"
+                                placeholder="Describe the daily responsibilities, required skills, and any other benefits..."
+                                required
+                                value={formData.description}
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                                 minLength={VALIDATION_LIMITS.jobDescription.min}
                                 maxLength={VALIDATION_LIMITS.jobDescription.max}

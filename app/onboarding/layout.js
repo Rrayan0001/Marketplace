@@ -1,27 +1,23 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { adminAuth, adminDb } from '@/lib/firebase/admin'
+import { cookies } from 'next/headers'
 import Header from '@/components/Header'
 
 export default async function OnboardingLayout({ children }) {
-    const supabase = await createClient()
+    const cookieStore = await cookies()
+    const session = cookieStore.get('session')?.value
 
-    // Ensure user is signed in to see onboarding
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    if (!session) redirect('/login')
 
-    if (!user) {
+    let decodedToken;
+    try {
+        decodedToken = await adminAuth.verifySessionCookie(session, true)
+    } catch {
         redirect('/login')
     }
 
-    // If user already has a profile that is pending or approved, redirect them away
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('status')
-        .eq('id', user.id)
-        .maybeSingle()
-
-    if (profile) {
+    const profileSnap = await adminDb.collection('profiles').doc(decodedToken.uid).get()
+    if (profileSnap.exists) {
         redirect('/dashboard')
     }
 

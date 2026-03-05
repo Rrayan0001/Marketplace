@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { auth, db, storage } from "@/lib/firebase/config";
+import { doc, setDoc, addDoc, collection } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +22,6 @@ import {
 
 export default function VendorOnboardingPage() {
     const router = useRouter();
-    const supabase = createClient();
     const [loading, setLoading] = useState(false);
     const [file, setFile] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
@@ -57,58 +58,57 @@ export default function VendorOnboardingPage() {
                 );
             }
 
-            const { data: { user } } = await supabase.auth.getUser();
+            const user = auth.currentUser;
             if (!user) throw new Error("Not authenticated");
 
             let documentUrl = "";
 
-            // 1. Upload File
+            // 1. Upload File to Firebase Storage
             if (file) {
                 const fileExt = file.name.split('.').pop();
-                const fileName = `${user.id}_gst_${Date.now()}.${fileExt}`;
-
-                const { error: uploadError } = await supabase.storage.from('documents').upload(fileName, file);
-                if (uploadError) throw uploadError;
-
-                const { data: publicData } = supabase.storage.from('documents').getPublicUrl(fileName);
-                documentUrl = publicData.publicUrl;
+                const fileName = `documents/${user.uid}_gst_${Date.now()}.${fileExt}`;
+                const storageRef = ref(storage, fileName);
+                await uploadBytes(storageRef, file);
+                documentUrl = await getDownloadURL(storageRef);
             }
 
             // 2. Create base Profile
-            const { error: profileError } = await supabase.from('profiles').insert({
-                id: user.id, email: user.email, role: 'vendor',
-                full_name: formData.ownerName, phone: normalizedPhone, status: 'pending'
+            await setDoc(doc(db, 'profiles', user.uid), {
+                id: user.uid,
+                email: user.email,
+                role: 'vendor',
+                full_name: formData.ownerName,
+                phone: normalizedPhone,
+                status: 'pending',
+                created_at: new Date().toISOString(),
             });
-            if (profileError) throw profileError;
 
             // 3. Create Vendor Profile
-            // we'd ideally map names to UUIDs, but keeping text array for now since schema asks for UUIDs. Wait, schema actually specified UUID[] for `operating_zones`. For simplicity in dev without zone DB loaded, we'll omit or parse differently. We will omit operating_zones insert in dev and focus on required fields.
-            const { error: vendorError } = await supabase.from('vendor_profiles').insert({
-                profile_id: user.id,
+            await setDoc(doc(db, 'vendor_profiles', user.uid), {
+                profile_id: user.uid,
                 business_name: formData.businessName,
                 service_category: formData.serviceCategory,
                 gst_number: normalizedGst,
                 gst_certificate_url: documentUrl,
-                description: formData.description.trim()
+                description: formData.description.trim(),
+                created_at: new Date().toISOString(),
             });
-            if (vendorError) throw vendorError;
 
             // 4. Create AI Document entry
             if (documentUrl) {
-                const { data: docData, error: docError } = await supabase.from('documents').insert({
-                    profile_id: user.id, document_type: 'gst_certificate', file_url: documentUrl, ai_status: 'pending'
-                }).select('id').single();
+                const docRef = await addDoc(collection(db, 'documents'), {
+                    profile_id: user.uid,
+                    document_type: 'gst_certificate',
+                    file_url: documentUrl,
+                    ai_status: 'pending',
+                    created_at: new Date().toISOString(),
+                });
 
-                if (docError) throw docError;
-
-                // Trigger AI Verification in the background
-                if (docData?.id) {
-                    fetch('/api/verify-document', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ documentId: docData.id, profileId: user.id })
-                    }).catch(err => console.error("Failed to trigger AI verification:", err));
-                }
+                fetch('/api/verify-document', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ documentId: docRef.id, profileId: user.uid })
+                }).catch(err => console.error("Failed to trigger AI verification:", err));
             }
 
             router.push("/dashboard");
@@ -145,12 +145,10 @@ export default function VendorOnboardingPage() {
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">Phone Number <span className="text-red-500">*</span></Label>
                                 <Input
-                                    type="tel"
-                                    required
+                                    type="tel" required
                                     value={formData.phone}
                                     onChange={e => setFormData({ ...formData, phone: normalizeIndianPhone(e.target.value) })}
-                                    inputMode="numeric"
-                                    maxLength={10}
+                                    inputMode="numeric" maxLength={10}
                                     pattern="[6-9][0-9]{9}"
                                     title="Enter a valid 10-digit phone number starting with 6, 7, 8, or 9."
                                     className="h-11"
@@ -174,14 +172,13 @@ export default function VendorOnboardingPage() {
                                     <option value="kitchen_equipment">Kitchen Equipment</option>
                                     <option value="cleaning_supplies">Cleaning Supplies</option>
                                     <option value="food_packaging">Food Packaging</option>
-                                    <option value="maintenance">Maintenance & Repair</option>
+                                    <option value="maintenance">Maintenance &amp; Repair</option>
                                 </select>
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-zinc-700 font-medium">GST Number <span className="text-red-500">*</span></Label>
                                 <Input
-                                    type="text"
-                                    required
+                                    type="text" required
                                     value={formData.gstNumber}
                                     onChange={e => setFormData({ ...formData, gstNumber: normalizeGst(e.target.value).slice(0, 15) })}
                                     maxLength={15}
@@ -196,8 +193,7 @@ export default function VendorOnboardingPage() {
                             <Label className="text-zinc-700 font-medium">Business Description <span className="text-red-500">*</span></Label>
                             <textarea
                                 className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50"
-                                rows="3"
-                                required
+                                rows="3" required
                                 value={formData.description}
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                                 minLength={VALIDATION_LIMITS.vendorDescription.min}
@@ -214,7 +210,6 @@ export default function VendorOnboardingPage() {
                                 <Label className="text-zinc-700 font-medium text-lg">Upload GST Certificate <span className="text-red-500">*</span></Label>
                                 <p className="text-sm text-zinc-500 mt-1">This will be scanned by our AI for verification.</p>
                             </div>
-
                             <Alert className="bg-blue-50/50 border-blue-200">
                                 <ScanFace className="h-5 w-5 text-blue-600" />
                                 <AlertTitle className="text-blue-900 font-semibold ml-2">AI Verification Guidelines</AlertTitle>
@@ -226,10 +221,8 @@ export default function VendorOnboardingPage() {
                                     </ul>
                                 </AlertDescription>
                             </Alert>
-
                             <Input
-                                type="file"
-                                accept="image/*,.pdf"
+                                type="file" accept="image/*,.pdf"
                                 onChange={e => setFile(e.target.files[0])}
                                 required
                                 className="pt-2.5 pb-2 h-auto text-zinc-600 cursor-pointer bg-zinc-50 hover:bg-zinc-100 transition-colors"

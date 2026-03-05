@@ -1,146 +1,191 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { adminDb } from "@/lib/firebase/admin";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import EmptyState from "@/components/ui/empty-state";
-import { ClipboardCheck, Clock3, ShieldCheck, TriangleAlert, LoaderCircle } from "lucide-react";
-
-function getAiBadge(doc) {
-  if (!doc) {
-    return (
-      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-        No document
-      </Badge>
-    );
-  }
-
-  if (doc.ai_status === "passed") {
-    return (
-      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-        AI Verified {doc.ai_confidence_score ? `(${Math.round(doc.ai_confidence_score * 100)}%)` : ""}
-      </Badge>
-    );
-  }
-
-  if (doc.ai_status === "flagged") {
-    return (
-      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-        AI Flagged
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-      Processing
-    </Badge>
-  );
-}
+import {
+  UserMultipleIcon,
+  Briefcase02Icon,
+  Store01Icon,
+  PackageIcon,
+  ClipboardIcon,
+  ArrowUpRight01Icon,
+  ArrowRight01Icon,
+  UserAdd01Icon,
+  Shield02Icon
+} from "hugeicons-react";
 
 export default async function AdminDashboardPage() {
-  const supabase = await createClient();
+  // Fetch platform-wide metrics
+  const [
+    allProfilesSnap,
+    pendingSnap,
+    activeJobsSnap,
+    applicationsSnap,
+    leadsSnap,
+  ] = await Promise.all([
+    adminDb.collection("profiles").get(),
+    adminDb.collection("profiles").where("status", "==", "pending").get(),
+    adminDb.collection("jobs").where("is_active", "==", true).get(),
+    adminDb.collection("applications").get(),
+    adminDb.collection("quote_requests").get(),
+  ]);
 
-  const { data: pendingProfiles, error } = await supabase
-    .from("profiles")
-    .select(
-      `
-      id,
-      email,
-      role,
-      full_name,
-      status,
-      created_at,
-      documents (
-        id,
-        document_type,
-        ai_status,
-        ai_confidence_score
-      )
-    `
-    )
-    .eq("status", "pending")
-    .order("created_at", { ascending: true });
+  const allProfiles = allProfilesSnap.docs.map(d => d.data());
+  const totalWorkers = allProfiles.filter(p => p.role === "worker" && p.status === "approved").length;
+  const totalRestaurants = allProfiles.filter(p => p.role === "restaurant" && p.status === "approved").length;
+  const totalVendors = allProfiles.filter(p => p.role === "vendor" && p.status === "approved").length;
+  const pendingCount = pendingSnap.size;
+  const activeJobs = activeJobsSnap.size;
+  const totalApplications = applicationsSnap.size;
+  const totalLeads = leadsSnap.size;
 
-  if (error) {
-    console.error("Error fetching pending profiles:", error);
-  }
+  // Recent registrations (last 10)
+  const recentProfiles = allProfiles
+    .filter(p => p.created_at)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 8);
 
-  const pendingCount = pendingProfiles?.length || 0;
+  const metrics = [
+    { label: "Total Workers", value: totalWorkers, icon: UserMultipleIcon, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100" },
+    { label: "Total Restaurants", value: totalRestaurants, icon: Store01Icon, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
+    { label: "Total Vendors", value: totalVendors, icon: PackageIcon, color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-100" },
+    { label: "Active Jobs", value: activeJobs, icon: Briefcase02Icon, color: "text-green-600", bg: "bg-green-50", border: "border-green-100" },
+    { label: "Total Applications", value: totalApplications, icon: ArrowUpRight01Icon, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100" },
+    { label: "B2B Leads", value: totalLeads, icon: PackageIcon, color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-100" },
+  ];
 
   return (
-    <div className="container max-w-6xl mx-auto py-12 px-4">
-      <header className="mb-8">
-        <div className="rounded-2xl border border-zinc-200 bg-gradient-to-r from-orange-50 via-white to-green-50 p-6 md:p-8">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-orange-700">
-                <ClipboardCheck className="h-3.5 w-3.5" />
-                Admin Queue
+    <div>
+      {/* Pending alert */}
+      {pendingCount > 0 && (
+        <Link href="/admin/queue">
+          <div className="mb-6 p-4 rounded-xl border border-amber-200 bg-amber-50 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-amber-100 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <ClipboardIcon className="w-5 h-5 text-amber-600" />
               </div>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-zinc-900">Approval Queue</h1>
-              <p className="mt-2 text-zinc-600">
-                Review new profiles and finalize onboarding approvals.
-              </p>
+              <div>
+                <p className="font-semibold text-amber-900">{pendingCount} profile{pendingCount > 1 ? "s" : ""} awaiting approval</p>
+                <p className="text-sm text-amber-700">Click to review the approval queue</p>
+              </div>
             </div>
-            <Badge variant="outline" className="h-8 px-3 bg-white border-zinc-200 text-zinc-700">
-              {pendingCount} pending
-            </Badge>
+            <ArrowRight01Icon className="hidden md:block w-5 h-5 text-amber-600 shrink-0" />
           </div>
-        </div>
-      </header>
+        </Link>
+      )}
 
-      {pendingCount === 0 ? (
-        <EmptyState
-          icon={<ShieldCheck className="h-8 w-8" />}
-          title="All caught up"
-          description="There are no pending profiles to review at the moment."
-        />
-      ) : (
-        <div className="grid gap-4">
-          {pendingProfiles?.map((profile) => {
-            const latestDoc = profile.documents?.[0];
-            return (
-              <Card key={profile.id} className="border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div>
-                      <CardTitle className="text-xl text-zinc-900">
-                        {profile.full_name || "Anonymous User"}
-                      </CardTitle>
-                      <CardDescription className="mt-1 text-zinc-600">
-                        {profile.email} • Applied on {new Date(profile.created_at).toLocaleDateString()}
-                      </CardDescription>
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <Card key={metric.label} className={`shadow-sm border ${metric.border} hover:shadow-md transition-shadow`}>
+              <CardContent className="p-4 md:p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-10 h-10 rounded-lg ${metric.bg} flex items-center justify-center shrink-0`}>
+                    <Icon className={`w-5 h-5 ${metric.color}`} />
+                  </div>
+                </div>
+                <p className={`text-2xl md:text-3xl font-bold tracking-tight ${metric.color}`}>{metric.value}</p>
+                <p className="text-xs md:text-sm font-medium text-zinc-500 mt-1">{metric.label}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Quick Actions */}
+      <h2 className="text-lg font-bold text-zinc-900 mb-4">Quick Actions</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <Link href="/admin/queue">
+          <Card className="shadow-sm border-zinc-200 hover:shadow-md hover:border-orange-200 transition-all cursor-pointer group">
+            <CardContent className="p-4 md:p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center shrink-0 group-hover:bg-orange-100 transition-colors">
+                <ClipboardIcon className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-zinc-900 truncate">Approval Queue</p>
+                <p className="text-xs md:text-sm text-zinc-500 truncate">Review pending profiles</p>
+              </div>
+              <ArrowRight01Icon className="w-4 h-4 text-zinc-400 ml-auto shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/users">
+          <Card className="shadow-sm border-zinc-200 hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
+            <CardContent className="p-4 md:p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
+                <UserMultipleIcon className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-zinc-900 truncate">User Directory</p>
+                <p className="text-xs md:text-sm text-zinc-500 truncate">Manage all accounts</p>
+              </div>
+              <ArrowRight01Icon className="w-4 h-4 text-zinc-400 ml-auto shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/jobs">
+          <Card className="shadow-sm border-zinc-200 hover:shadow-md hover:border-green-200 transition-all cursor-pointer group">
+            <CardContent className="p-4 md:p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center shrink-0 group-hover:bg-green-100 transition-colors">
+                <Briefcase02Icon className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-zinc-900 truncate">Job Moderation</p>
+                <p className="text-xs md:text-sm text-zinc-500 truncate">Oversee job listings</p>
+              </div>
+              <ArrowRight01Icon className="w-4 h-4 text-zinc-400 ml-auto shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      {/* Recent Activity */}
+      <h2 className="text-lg font-bold text-zinc-900 mb-4">Recent Registrations</h2>
+      <Card className="shadow-sm border-zinc-200">
+        <CardContent className="p-0">
+          {recentProfiles.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="mx-auto w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mb-4">
+                <UserAdd01Icon className="w-6 h-6 text-zinc-400" />
+              </div>
+              <p className="text-zinc-500 font-medium">No registrations yet.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-100">
+              {recentProfiles.map((profile, i) => (
+                <div key={i} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-zinc-50/50 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center text-sm font-semibold text-zinc-600 shrink-0">
+                      {profile.full_name ? profile.full_name.charAt(0).toUpperCase() : "?"}
                     </div>
-                    <Badge variant="secondary" className="capitalize">
-                      {profile.role}
+                    <div className="min-w-0">
+                      <p className="font-medium text-zinc-900 truncate">{profile.full_name || "Unknown"}</p>
+                      <p className="text-xs text-zinc-500 truncate">{profile.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="secondary" className="capitalize text-xs">{profile.role}</Badge>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${profile.status === "approved"
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : profile.status === "pending"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-red-50 text-red-700 border-red-200"
+                        }`}
+                    >
+                      {profile.status}
                     </Badge>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-0 flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex items-center gap-2 text-sm text-zinc-600">
-                    {latestDoc ? (
-                      <Clock3 className="w-4 h-4 text-zinc-400" />
-                    ) : (
-                      <TriangleAlert className="w-4 h-4 text-amber-500" />
-                    )}
-                    <span className="capitalize">
-                      {latestDoc?.document_type?.replace("_", " ") || "No document uploaded"}
-                    </span>
-                    {getAiBadge(latestDoc)}
-                  </div>
-                  <Button asChild>
-                    <Link href={`/admin/review/${profile.id}`}>
-                      <LoaderCircle className="w-4 h-4 mr-2" />
-                      Review Profile
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
