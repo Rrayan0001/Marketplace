@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import EmptyState from "@/components/ui/empty-state";
 import { ClipboardIcon, Clock01Icon, Shield02Icon, Alert02Icon, Loading01Icon } from "hugeicons-react";
 
 function getAiBadge(doc) {
